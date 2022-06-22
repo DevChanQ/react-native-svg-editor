@@ -23,15 +23,15 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
   targetPoint: {
-    width: 10,
-    height: 10,
+    width: 16,
+    height: 16,
     position: 'absolute',
     backgroundColor: 'white',
     borderWidth: 1,
     borderColor: '#19A0FB',
     borderRadius: 12,
-    marginLeft: -5,
-    marginTop: -5,
+    marginLeft: -8,
+    marginTop: -8,
   },
   controlPoint: {
     width: 6,
@@ -142,8 +142,8 @@ class SvgPathItem extends SvgItem {
   _lastKX = 1;
   _lastKY = 1;
 
-  onValueRefreshed = (changed) => {
-    this.parsedPath = new Svg(this.state.attributes['d']);
+  get translateEnabled() {
+    return !this.state.editMode && super.translateEnabled;
   }
 
   get startPoint() {
@@ -153,6 +153,10 @@ class SvgPathItem extends SvgItem {
 
   get strokeWidth() {
     return parseFloat(this.state.attributes['stroke-width'] || (this.state.attributes['stroke'] ? 1 : 0));
+  }
+
+  onValueRefreshed = (changed) => {
+    this.parsedPath = new Svg(this.state.attributes['d']);
   }
 
   refreshValues() {
@@ -308,6 +312,7 @@ class SvgPathItem extends SvgItem {
   renderControlLayer() {
     const {scale = 1} = this.props;
     const {attributes, editMode} = this.state;
+    const parsedPath = this.parsedPath;
 
     if (!editMode) {
       return super.renderControlLayer();
@@ -334,9 +339,8 @@ class SvgPathItem extends SvgItem {
         viewBox={this.getParentViewBox()}
         lineStyle={{width, height, left: translateX, top: translateY, transform: [{scale: svgScale}]}}
         targetPointUpdated={this.targetPointUpdated}
-        controlPoints={this.parsedPath.controlLocations().filter(point => point.movable)}
-        targetPoints={this.parsedPath.targetLocations().filter(point => point.movable)}
-      />
+        controlPoints={parsedPath.controlLocations().filter(point => point.movable)}
+        targetPoints={parsedPath.targetLocations().filter(point => point.movable)} />
     )
   }
 

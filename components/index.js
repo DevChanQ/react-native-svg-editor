@@ -451,7 +451,7 @@ class SvgEditor extends React.PureComponent {
     let viewBox = `0 0 ${width} ${height}`;
 
     // get children svgson
-    const EXCLUDE_ELEMENTS = ['title', 'defs', 'style']
+    const EXCLUDE_ELEMENTS = ['title', 'defs', 'style', 'metadata', 'desc']
     let svgsons = [];
     for (let child of children) {
       let childId = child.get('id'), childName = child.get('name');

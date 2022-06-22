@@ -69,7 +69,6 @@ export default class PinchZoomView extends Component {
   };
 
   _scaleToFit(canvasWidth=1, canvasHeight=1, animated=false) {
-    console.log(canvasWidth, canvasHeight)
     this._containerRef.current.measure((x, y, containerWidth, containerHeight, pageX, pageY) => {
 
       let canvasAspect = canvasWidth / canvasHeight;

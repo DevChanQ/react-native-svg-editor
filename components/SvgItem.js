@@ -98,6 +98,10 @@ class SvgItem extends React.PureComponent {
     }
   }
 
+  get translateEnabled() {
+    return !this.locked && this.selected;
+  }
+  
   get isFrame() {
     return this.state.attributes.id === 'frame';
   }
@@ -483,7 +487,7 @@ class SvgItem extends React.PureComponent {
             onHandlerStateChange={this._onDoubleTap}
             numberOfTaps={2}>
               <PanGestureHandler
-                enabled={!this.locked && this.selected}
+                enabled={this.translateEnabled}
                 minPointers={1}
                 onGestureEvent={this.onPan}
                 onHandlerStateChange={this.onPanStateChanged}>
