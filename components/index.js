@@ -472,7 +472,7 @@ class SvgEditor extends React.PureComponent {
       attributes: {viewBox},
       children: svgsons,
     });
-    console.log('exportSvg(): ' + svg);
+    console.log('SvgEditor.exportSvg(): ' + svg);
     return svg;
   }
 
@@ -517,7 +517,7 @@ class SvgEditor extends React.PureComponent {
    */
   addSvg(svg) {
     return this._parseSvg(svg).then(svgson => {
-      console.log(svgson);
+      console.log('SvgEditor.addSvg(): ' + svgson);
       this.push({
         type: 'add',
         payload: this._createElement(svgson),

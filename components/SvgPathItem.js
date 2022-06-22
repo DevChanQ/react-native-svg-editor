@@ -61,7 +61,6 @@ const MemorizedPoint = ({scale, point, onPan: givenOnPan, onPanEnd, children}) =
 
   let onPan = useCallback(({nativeEvent: {translationX, translationY}}) => {
     let point = {x: _lastPoint.current.x + translationX/scale, y: _lastPoint.current.y + translationY/scale}
-    // console.log(point)
     givenOnPan(point)
   }, [givenOnPan])
 
@@ -96,7 +95,7 @@ const EditLayer = ({lineStyle, viewBox, targetPoints, controlPoints, targetPoint
   let controlPointLines = controlPoints.map(point => {
     return point.relations ? point.relations.map(rel => {
       return (
-        <Line x1={point.x} y1={point.y} x2={rel.x} y2={rel.y} stroke="#ababab" strokeWidth="0.2" />
+        <Line x1={point.x} y1={point.y} x2={rel.x} y2={rel.y} stroke="#ababab" strokeWidth="0.3" />
       )
     }) : [];
   }).flat();
@@ -127,7 +126,7 @@ const EditLayer = ({lineStyle, viewBox, targetPoints, controlPoints, targetPoint
   return (
     <View style={styles.absolute}>
       <ReactSvg style={[{position: 'absolute'}, lineStyle]} viewBox={viewBox}>
-        {controlPointLines}
+        { controlPointLines }
       </ReactSvg>
       <View style={{transform: [{translateX: -startPoint.x}, {translateY: -startPoint.y}]}}>
         {targetPoints}
@@ -143,10 +142,8 @@ class SvgPathItem extends SvgItem {
   _lastKX = 1;
   _lastKY = 1;
 
-  constructor(props) {
-    super(props);
-    
-    this.parsedPath = new Svg(this._lastAttributes['d']);
+  onValueRefreshed = (changed) => {
+    this.parsedPath = new Svg(this.state.attributes['d']);
   }
 
   get startPoint() {
@@ -175,7 +172,7 @@ class SvgPathItem extends SvgItem {
     return { ...rect, ...attributes };
   }
 
-  toSvgson() {
+  toSvgson(external=true) {
     let info = super.toSvgson(), {attributes} = info;
     let {appX, appY, d} = this.attributes, path = new Svg(d);
 
@@ -195,8 +192,6 @@ class SvgPathItem extends SvgItem {
   }
 
   targetPointUpdated = (point, {x, y}) => {
-    // let newPoint = parsedPath.current.changeType(point.itemReference, CurveTo.key)
-    // parsedPath.current.setLocation(newPoint, {x, y});
     this.parsedPath.setLocation(point, {x, y});
     this.updatePath();
   };
@@ -236,9 +231,16 @@ class SvgPathItem extends SvgItem {
     const newPath = this.parsedPath.asString();
     const rect = this.getBoundingBox(newPath, this.strokeWidth);
 
+    let { left, top } = rect;
+    let { left: oldLeft, top: oldTop, appX, appY } = this._lastAttributes;
+    
+    appX += left - oldLeft;
+    appY += top - oldTop;
+
     this.updateAttributes({
       d: newPath,
       ...rect,
+      appX, appY,
     });
   }
 
@@ -269,9 +271,10 @@ class SvgPathItem extends SvgItem {
     x1 += strokeWidth;
     y1 += strokeWidth;
 
+    let width = x1-x0, height = y1-y0;
+
     const rect = {
-      width: x1-x0,
-      height: y1-y0,
+      width, height,
       left: x0, top: y0, right: x1, bottom: y1,
     };
 

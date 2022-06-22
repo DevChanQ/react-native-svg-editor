@@ -83,11 +83,11 @@ class SvgItem extends React.PureComponent {
 
   componentDidUpdate({info}) {
     const {info: newInfo, id} = this.props;
-    console.log('conponentDidUpdate: ' + id);
+    console.log('SvgItem.conponentDidUpdate(): ' + id);
 
     // update internal state if new props is provided
     if (!newInfo.equals(info)) {
-      console.log(`SvgItem (${id}) props different, should update internal state...`)
+      console.log(`SvgItem: (${id}) props different, should update internal state...`)
 
       // compare new and old attributes
       const newAttributes = newInfo.get('attributes'), oldAttributes = info.get('attributes');
@@ -144,13 +144,11 @@ class SvgItem extends React.PureComponent {
 
     info.attributes = attributes;
 
-    console.log(info)
-
     return info;
   }
 
   refreshValues() {
-    console.log('refreshValues: ', this.props.id);
+    console.log('SvgItem.refreshValues(): ', this.props.id);
 
     this._lastAttributes = this._getAttributesFromProps();
     this.setState({attributes: { ...this._lastAttributes }});
@@ -522,7 +520,7 @@ class SvgAsyncItem extends SvgItem {
   }
 
   loadAsyncContent() {
-    console.log('SvgAsyncItem.loadAsyncContent');
+    console.log('SvgAsyncItem.loadAsyncContent()');
     
     this.setState({ loading: true });
     this.load().then((state={}) => {
