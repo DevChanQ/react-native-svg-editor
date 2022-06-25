@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, PixelRatio, Animated, Platform, Alert } from 'react-native';
+import { View, Image, StyleSheet, PixelRatio, Animated, Platform, Alert } from 'react-native';
 import ViewShot, {captureRef} from 'react-native-view-shot';
 import ReactNativeHapticFeedback from "react-native-haptic-feedback";
 import PropTypes from 'prop-types';
@@ -37,6 +37,13 @@ const vibrateOptions = {
 
 const frameWidth = 2 / PixelRatio.get();
 const styles = StyleSheet.create({
+  watermark: {
+    position: 'absolute',
+    left: 8,
+    bottom: 8,
+    aspectRatio: 4.1,
+    width: 100,
+  },
   svgs: {
     position: 'absolute',
   },
@@ -121,6 +128,8 @@ class SvgEditor extends React.PureComponent {
       width: 0,
       height: 0,
     },
+
+    watermark: null,
   };
 
   exportSize = {
@@ -291,6 +300,8 @@ class SvgEditor extends React.PureComponent {
 
   _generateSVGComponents() {
     const {selected, scale} = this.state;
+    const {options={}} = this.props;
+    const {showSize=true} = options;
 
     let children = this._getChildrenAndApplyHistory();
 
@@ -306,9 +317,11 @@ class SvgEditor extends React.PureComponent {
           setElementById={this.setElementById}
           offsetPositionToGuideline={this._offsetPositionToGuideline}
           // locked
-          scale={scale}
-          selected={selected === id}
           info={child}
+          selected={selected === id}
+          scale={scale}
+          showSize={showSize}
+
           id={id}
           key={id}
         />
@@ -407,14 +420,17 @@ class SvgEditor extends React.PureComponent {
   /**
    * Capture svg editor and export as an image file
    * @param {object} options view shot options
+   * @param {boolean} options.preview Whether the image should be a preview or not
+   * @param {ImageRequireSource} options.watermark Watermark inserted to exported image
    * @returns {Promise} Promise that resolves to the uri of the exported image
    */
   export(options = {}) {
-    const {preview, ...config} = options;
+    const {preview, watermark, ...config} = options;
 
     this.setState({
       selected: null,
       scale: preview ? 1 : 3,
+      watermark,
     });
 
     // capture canvas next tick (after 'deselect' action)
@@ -426,15 +442,16 @@ class SvgEditor extends React.PureComponent {
           height /= 2;
         }
 
-        resolve(
-          captureRef(this.viewShot.current, {
-            format: 'png',
-            width: width / PixelRatio.get(),
-            height: height / PixelRatio.get(),
-            ...config,
-          })
-        );
-      }, 100);
+        captureRef(this.viewShot.current, {
+          format: 'png',
+          width: width / PixelRatio.get(),
+          height: height / PixelRatio.get(),
+          ...config,
+        }).then(uri => {
+          this.setState({ watermark: null });
+          resolve(uri);
+        });
+      }, 300);
     });
   }
 
@@ -496,6 +513,10 @@ class SvgEditor extends React.PureComponent {
     this.setState({historyPointer});
   }
 
+  /**
+   * Push action(s) to history and set new history pointer state
+   * @param {object,Array} actions An action object or an array of action objects
+   */
   push(actions) {
     let {historyPointer} = this.state;
     this.history = this.history.slice(0, historyPointer).concat(actions);
@@ -503,6 +524,7 @@ class SvgEditor extends React.PureComponent {
     this.setState({ historyPointer: this.history.length });
   }
 
+  
   addElement(ele) {
     this.push({
       type: 'add',
@@ -610,13 +632,17 @@ class SvgEditor extends React.PureComponent {
 
   render() {
     const svgs = this._generateSVGComponents();
-    const {width, height} = this.state.canvasSize;
+    const {containerStyle={}} = this.props;
+    const {canvasSize, watermark} = this.state;
+
+    const {width, height} = canvasSize;
+    const watermarkWidth = PixelRatio.roundToNearestPixel(width/4);
 
     return (
       <PinchZoomView
         ref={this.pinchZoomViewRef}
         maxScale="4"
-        style={styles.pinchZoomStyle}
+        style={[styles.pinchZoomStyle, containerStyle]}
         onZoomEnd={this.onZoomEnd}>
         <View style={styles.frameContainer}>
           <View pointerEvents='none' style={styles.frame} />
@@ -625,6 +651,13 @@ class SvgEditor extends React.PureComponent {
             <View onLayout={this._onEditorLayout} style={styles.svgs}>
               {svgs}
             </View>
+            {
+              watermark ?
+              <Image
+                style={[styles.watermark, { width: watermarkWidth }]}
+                source={watermark}
+                resizeMode="contain" /> : null
+            }
             { this.renderGuidelines() }
           </ViewShot>
         </View>

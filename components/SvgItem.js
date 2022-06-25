@@ -14,7 +14,7 @@ import { PanGestureHandler, State, TapGestureHandler } from 'react-native-gestur
 import RNFS from 'react-native-fs';
 import { stringify } from "svgson";
 
-import { mergeDeep, valueOrDefault } from '@/utils';
+import { mergeDeep, valueOrDefault } from '../utils';
 
 const styles = StyleSheet.create({
   absolute: {
@@ -431,7 +431,8 @@ class SvgItem extends React.PureComponent {
   }
 
   renderControlLayer() {
-    let {width, height} = this.getSize();
+    const {width, height} = this.getSize();
+    const {showSize} = this.props;
 
     return (
       <View style={[
@@ -448,15 +449,17 @@ class SvgItem extends React.PureComponent {
             </PanGestureHandler>
           ) : null
         }
-        <View style={[
-          styles.sizeBox,
-          {
-            backgroundColor: this.locked ? '#B7B7B7' : this.controlColor,
-            top: height+16
-          }
-        ]}>
-          <Text numberOfLines={1} style={styles.sizeText}>{`${width.toFixed(1)} x ${height.toFixed(1)}`}</Text>
-        </View>
+        { 
+          showSize ? <View style={[
+            styles.sizeBox,
+            {
+              backgroundColor: this.locked ? '#B7B7B7' : this.controlColor,
+              top: height+16
+            }
+          ]}>
+            <Text numberOfLines={1} style={styles.sizeText}>{`${width.toFixed(1)} x ${height.toFixed(1)}`}</Text>
+          </View> : null
+        }
       </View>
     );
   }
@@ -703,6 +706,7 @@ class SvgPlainItem extends SvgItem {
 class SvgTextItem extends SvgItem {
   baselineOffset = 0;
   valueRefreshed = true;
+  manuallyEdited = false;
 
   _initAttributes(a) {
     let attributes = super._initAttributes(a);
@@ -710,14 +714,19 @@ class SvgTextItem extends SvgItem {
     attributes['appX'] = valueOrDefault(attributes['appX'], attributes['x'] || 0);
     attributes['appY'] = valueOrDefault(attributes['appY'], attributes['y'] || 0);
     attributes['font-size'] = valueOrDefault(attributes['font-size'], 16);
-    attributes['width'] = valueOrDefault(attributes['width'], 100);
-    attributes['height'] = valueOrDefault(attributes['height'], 100);
+    attributes['width'] = valueOrDefault(attributes['width'], 400);
+    attributes['height'] = valueOrDefault(attributes['height'], 400);
 
     return attributes;
   }
 
-  onValueRefreshed = () => {
+  onValueRefreshed = (changed) => {
     this.valueRefreshed = true;
+  }
+
+  scale(translation) {
+    if (!this.manuallyEdited) this.manuallyEdited = true;
+    super.scale(translation);
   }
 
   toSvgson(external) {
@@ -755,7 +764,7 @@ class SvgTextItem extends SvgItem {
 
   onTextLayout = ({ nativeEvent }) => {
     const {lines} = nativeEvent;
-    if (this.valueRefreshed) {
+    if (this.valueRefreshed && !this.manuallyEdited) {
       let heights = lines.map(({height}) => height), widths = lines.map(({width}) => width);
       let height = heights.reduce((p, v) => ( p > v ? p : v ), 0), width = widths.reduce((p, v) => p + v, 0);
       let size = {width: width || 100, height: height || 100};
@@ -864,7 +873,7 @@ class SvgImageItem extends SvgItem {
           <Image
             style={{ width: '50%', maxWidth: 30, }}
             resizeMode="contain"
-            source={require("@/assets/icons/no_image/no_image.png")} />
+            source={require("../assets/no_image/no_image.png")} />
         </View>
       )
     }
