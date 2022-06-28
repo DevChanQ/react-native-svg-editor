@@ -71,20 +71,11 @@ export default class PinchZoomView extends Component {
   _scaleToFit(canvasWidth=1, canvasHeight=1, animated=false) {
     this._containerRef.current.measure((x, y, containerWidth, containerHeight, pageX, pageY) => {
 
-      let canvasAspect = canvasWidth / canvasHeight;
       let scale = 1;
-      if (canvasAspect >= 1) { // width > height
-        if (canvasWidth > containerWidth) {
-          scale = containerWidth / canvasWidth;
-        } else if (canvasHeight > containerHeight) {
-          scale = containerHeight / canvasHeight;
-        }
-      } else {
-        if (canvasHeight > containerHeight) {
-          scale = containerHeight / canvasHeight;
-        } else if (canvasWidth > containerWidth) {
-          scale = containerWidth / canvasWidth;
-        }
+      if (canvasWidth > containerWidth) {
+        scale = containerWidth / canvasWidth;
+      } else if (canvasHeight > containerHeight) {
+        scale = containerHeight / canvasHeight;
       }
       
       if (!scale || scale === Infinity) return;
@@ -94,19 +85,22 @@ export default class PinchZoomView extends Component {
       this._lastOffset.translationY = 0;
       if (animated) {
         const duration = 150;
-        Animated.timing(this._baseScale, {
+        Animated.spring(this._panX, {
+          toValue: 0,
+          speed: 18,
+          // duration,
+          useNativeDriver: true
+        }).start();
+        Animated.spring(this._panY, {
+          toValue: 0,
+          speed: 18,
+          // duration,
+          useNativeDriver: true
+        }).start();
+        Animated.spring(this._baseScale, {
           toValue: scale,
-          duration,
-          useNativeDriver: true
-        }).start();
-        Animated.timing(this._panX, {
-          toValue: 0,
-          duration,
-          useNativeDriver: true
-        }).start();
-        Animated.timing(this._panY, {
-          toValue: 0,
-          duration,
+          speed: 18,
+          // duration,
           useNativeDriver: true
         }).start();
       } else {
