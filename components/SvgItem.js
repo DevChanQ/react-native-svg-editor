@@ -715,7 +715,7 @@ class SvgTextItem extends SvgItem {
     attributes['appY'] = valueOrDefault(attributes['appY'], attributes['y'] || 0);
     attributes['font-size'] = valueOrDefault(attributes['font-size'], 16);
     attributes['width'] = valueOrDefault(attributes['width'], 400);
-    attributes['height'] = valueOrDefault(attributes['height'], 400);
+    attributes['height'] = valueOrDefault(attributes['height'], 80);
 
     return attributes;
   }

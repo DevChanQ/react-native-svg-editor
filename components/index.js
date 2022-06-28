@@ -39,10 +39,8 @@ const frameWidth = 2 / PixelRatio.get();
 const styles = StyleSheet.create({
   watermark: {
     position: 'absolute',
-    left: 8,
-    bottom: 8,
-    aspectRatio: 4.1,
-    width: 100,
+    left: 0,
+    bottom: 0
   },
   svgs: {
     position: 'absolute',
@@ -169,6 +167,10 @@ class SvgEditor extends React.PureComponent {
 
   get hasChanges() {
     return this.history.length > 0;
+  }
+
+  get canvasSize() {
+    return this.state.canvasSize;
   }
 
   /**
@@ -337,12 +339,16 @@ class SvgEditor extends React.PureComponent {
 
     let nodes = Object.keys(this.itemRefs).filter(key => !(key == 'frame' || key == id))
       .map(key => {
-        const attributes = this.itemRefs[key].current.attributes;
-        const { width, height } = this.itemRefs[key].current.getSize();
-        return ({
-          x: attributes.appX, y: attributes.appY, width, height,
-        })
-      });
+        if (this.itemRefs[key].current) {
+          const attributes = this.itemRefs[key].current.attributes;
+          const { width, height } = this.itemRefs[key].current.getSize();
+          return {
+            x: attributes.appX, y: attributes.appY, width, height,
+          };
+        } 
+
+        return null;
+      }).filter(node => !!node);
 
     let {position, guides} = calculateGuidelines(rect, nodes, this.state.canvasSize);
     this._setGuidelines(guides);
@@ -448,7 +454,9 @@ class SvgEditor extends React.PureComponent {
           height: height / PixelRatio.get(),
           ...config,
         }).then(uri => {
-          this.setState({ watermark: null });
+          this.setState({
+            watermark: null,
+          });
           resolve(uri);
         });
       }, 300);
@@ -636,7 +644,7 @@ class SvgEditor extends React.PureComponent {
     const {canvasSize, watermark} = this.state;
 
     const {width, height} = canvasSize;
-    const watermarkWidth = PixelRatio.roundToNearestPixel(width/4);
+    const watermarkWidth = PixelRatio.roundToNearestPixel(width/3.5);
 
     return (
       <PinchZoomView
