@@ -15,6 +15,10 @@ export default class PinchZoomView extends Component {
   _containerRef = React.createRef();
   _canvasRef = React.createRef();
 
+  _panRef = React.createRef();
+  _pinchRef = React.createRef();
+
+  _initialContentRendered = false;
   contentSize = { width: 100, height: 100 };
 
   constructor(props) {
@@ -148,6 +152,7 @@ export default class PinchZoomView extends Component {
 
     const {width, height} = layout;
     this.contentSize = { width, height };
+    this._initialContentRendered = true;
     this._scaleToFit(width, height);
   };
 
@@ -156,15 +161,22 @@ export default class PinchZoomView extends Component {
 
     return (
       <PanGestureHandler
-        maxPointers={1}
+        ref={this._panRef}
+        minPointers={2}
+        maxPointers={2}
         onGestureEvent={this._onPanGestureEvent}
-        onHandlerStateChange={this._onPanHandlerStateChange} >
+        onHandlerStateChange={this._onPanHandlerStateChange}
+        simultaneousHandlers={this._pinchRef}>
         <Animated.View
           ref={this._containerRef}
           style={style} >
           <PinchGestureHandler
+            ref={this._pinchRef}
+            minPointers={2}
+            maxPointers={2}
             onGestureEvent={this._onPinchGestureEvent}
-            onHandlerStateChange={this._onPinchHandlerStateChange} >
+            onHandlerStateChange={this._onPinchHandlerStateChange}
+            simultaneousHandlers={this._panRef}>
             <Animated.View style={styles.container}>
               <TapGestureHandler
                 onHandlerStateChange={this._onDoubleTap}
@@ -179,6 +191,7 @@ export default class PinchZoomView extends Component {
                           { translateX: this._translateX },
                           { translateY: this._translateY },
                         ],
+                        opacity: this._initialContentRendered ? 1 : 0,
                       }}>
                       {this.props.children}
                     </Animated.View>

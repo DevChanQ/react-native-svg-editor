@@ -7,7 +7,11 @@
     "react-native-fs": "^2.19.0",
     "react-native-haptic-feedback": "^1.14.0",
     "react-native-view-shot": "^3.3.0",
-    "react-native-svg": "^12.3.0"
+    "react-native-svg": "^12.3.0",
+    "react-native-wheel-color-picker": "^1.2.0",
+    "@react-native-community/blur": "^3.6.0",
+    "react-native-color-picker-ios": "^0.1.2",
+    "react-native-reanimated": "^2.8.0"
   },
   "dependencies": {
     "immutable": "^4.0.0",

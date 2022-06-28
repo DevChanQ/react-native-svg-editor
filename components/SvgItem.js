@@ -98,6 +98,10 @@ class SvgItem extends React.PureComponent {
     }
   }
 
+  get type() {
+    return this.props.info?.get('name');
+  }
+
   get translateEnabled() {
     return !this.locked && this.selected;
   }
@@ -492,6 +496,7 @@ class SvgItem extends React.PureComponent {
               <PanGestureHandler
                 enabled={this.translateEnabled}
                 minPointers={1}
+                maxPointers={1}
                 onGestureEvent={this.onPan}
                 onHandlerStateChange={this.onPanStateChanged}>
                 <View style={{position: 'absolute', width, height}}>

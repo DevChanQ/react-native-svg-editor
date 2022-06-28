@@ -314,7 +314,7 @@ class SvgEditor extends React.PureComponent {
       return (
         <ItemType
           ref={this.itemRefs[id]}
-          onTap={this.setSelected}
+          onTap={this._setSelected}
           onPanEnded={this._removeGuidelines}
           setElementById={this.setElementById}
           offsetPositionToGuideline={this._offsetPositionToGuideline}
@@ -385,7 +385,19 @@ class SvgEditor extends React.PureComponent {
 
   _removeGuidelines = () => {
     this._setGuidelines([]);
-  }
+  };
+
+  _setSelected = selected => {
+    if (selected) {
+      this.setState({selected: selected.id});
+
+      if (this.props.onElementSelect) {
+        this.props.onElementSelect(selected.svgson);
+      }
+    } else {
+      this.setState({selected: null});
+    }
+  };
 
   componentDidMount() {
     this._init();
@@ -394,8 +406,11 @@ class SvgEditor extends React.PureComponent {
   componentDidUpdate({svg: prevSvg}) {
     const {svg} = this.props;
 
+    console.log('SvgEditor.componentDidUpdate');
+
     // if prop svg changed, reinit
     if (svg !== prevSvg) {
+      console.log('SvgEditor.componentDidUpdate: SVG Changed');
       this._init();
     }
 
@@ -410,18 +425,6 @@ class SvgEditor extends React.PureComponent {
 
     return this.itemRefs[selected];
   }
-
-  setSelected = selected => {
-    if (selected) {
-      this.setState({selected: selected.id});
-
-      if (this.props.onElementSelect) {
-        this.props.onElementSelect(selected.svgson);
-      }
-    } else {
-      this.setState({selected: null});
-    }
-  };
 
   /**
    * Capture svg editor and export as an image file
@@ -566,7 +569,7 @@ class SvgEditor extends React.PureComponent {
     const {selected} = this.state;
     if (selected) {
       this.removeElement(selected);
-      this.setSelected(null);
+      this._setSelected(null);
     }
   }
 
