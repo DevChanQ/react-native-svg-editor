@@ -1,3 +1,5 @@
+import { Platform } from "react-native";
+
 export const makeid = length => {
   let result = '';
   let characters =
@@ -8,6 +10,8 @@ export const makeid = length => {
   }
   return `_${result}`;
 };
+
+export const getiOSVersion = () => parseInt(Platform.Version, 10);
 
 export const isObject = (item) => (item && typeof item === 'object' && !Array.isArray(item));
 

@@ -18,7 +18,6 @@ export default class PinchZoomView extends Component {
   _panRef = React.createRef();
   _pinchRef = React.createRef();
 
-  _initialContentRendered = false;
   contentSize = { width: 100, height: 100 };
 
   constructor(props) {
@@ -29,8 +28,9 @@ export default class PinchZoomView extends Component {
     this._lastOffset = {
       translationX: 0,
       translationY: 0,
-      scale: 1,
     };
+
+    this._opacity = new Animated.Value(0);
 
     this._panX = new Animated.Value(0);
     this._panY = new Animated.Value(0);
@@ -38,15 +38,20 @@ export default class PinchZoomView extends Component {
     this._translateY = new Animated.Value(0);
 
     this._panX.addListener(({value}) => {
-      this._translateX.setValue(PixelRatio.roundToNearestPixel(this._lastOffset.translationX + value / this._lastOffset.scale));
+      this._translateX.setValue(PixelRatio.roundToNearestPixel(this._lastOffset.translationX + value / this._currentScale));
     });
     this._panY.addListener(({value}) => {
-      this._translateY.setValue(PixelRatio.roundToNearestPixel(this._lastOffset.translationY + value / this._lastOffset.scale));
+      this._translateY.setValue(PixelRatio.roundToNearestPixel(this._lastOffset.translationY + value / this._currentScale));
     });
 
     this._baseScale = new Animated.Value(1);
     this._pinchScale = new Animated.Value(1);
     this._scale = Animated.multiply(this._baseScale, this._pinchScale);
+    this._currentScale = 1;
+
+    this._scale.addListener(({value}) => {
+      this._currentScale = value;
+    });
 
     this._onPanGestureEvent = Animated.event(
       [{ nativeEvent: { translationX: this._panX, translationY: this._panY, }, }],
@@ -84,11 +89,16 @@ export default class PinchZoomView extends Component {
       
       if (!scale || scale === Infinity) return;
 
-      this._lastOffset.scale = scale;
       this._lastOffset.translationX = 0;
       this._lastOffset.translationY = 0;
       if (animated) {
         const duration = 150;
+        Animated.spring(this._baseScale, {
+          toValue: scale,
+          speed: 18,
+          // duration,
+          useNativeDriver: true
+        }).start();
         Animated.spring(this._panX, {
           toValue: 0,
           speed: 18,
@@ -101,12 +111,6 @@ export default class PinchZoomView extends Component {
           // duration,
           useNativeDriver: true
         }).start();
-        Animated.spring(this._baseScale, {
-          toValue: scale,
-          speed: 18,
-          // duration,
-          useNativeDriver: true
-        }).start();
       } else {
         this._baseScale.setValue(scale);
         this._panX.setValue(0);
@@ -114,34 +118,32 @@ export default class PinchZoomView extends Component {
       }
 
       if (this.props.onZoomEnd) {
-        this.props.onZoomEnd(this._lastOffset.scale);
+        this.props.onZoomEnd(scale);
       }
 
     })
   }
 
-  _onPinchGestureEvent = ({nativeEvent: {scale}}) => {
-    this.props.onZoom(this._lastOffset.scale * scale)
+  _onPinchGestureEvent = () => {
+    this.props.onZoom(this._currentScale);
   }
 
   _onPanHandlerStateChange = event => {
     if (event.nativeEvent.oldState === State.ACTIVE) {
-      this._lastOffset.translationX += event.nativeEvent.translationX / this._lastOffset.scale;
-      this._lastOffset.translationY += event.nativeEvent.translationY / this._lastOffset.scale;
+      this._lastOffset.translationX += event.nativeEvent.translationX / this._currentScale;
+      this._lastOffset.translationY += event.nativeEvent.translationY / this._currentScale;
     }
   }
 
-  _onPinchHandlerStateChange = (event) => {
-    if (event.nativeEvent.oldState === State.ACTIVE) {
-      this._lastOffset.scale *= event.nativeEvent.scale;
-
+  _onPinchHandlerStateChange = ({ nativeEvent: { oldState, scale } }) => {
+    if (oldState === State.ACTIVE) {
       if (!this.customZoom) {
-        this._baseScale.setValue(this._lastOffset.scale);
+        this._baseScale.setValue(this._currentScale);
         this._pinchScale.setValue(1);
       }
 
       if (this.props.onZoomEnd) {
-        this.props.onZoomEnd(this._lastOffset.scale);
+        this.props.onZoomEnd(this._currentScale);
       }
     }
   };
@@ -149,10 +151,9 @@ export default class PinchZoomView extends Component {
   _onContentLayout = ({nativeEvent: {layout}}) => {
     if (this.customZoom) return;
     
-
     const {width, height} = layout;
     this.contentSize = { width, height };
-    this._initialContentRendered = true;
+    this._opacity.setValue(1);
     this._scaleToFit(width, height);
   };
 
@@ -191,7 +192,7 @@ export default class PinchZoomView extends Component {
                           { translateX: this._translateX },
                           { translateY: this._translateY },
                         ],
-                        opacity: this._initialContentRendered ? 1 : 0,
+                        opacity: this._opacity
                       }}>
                       {this.props.children}
                     </Animated.View>

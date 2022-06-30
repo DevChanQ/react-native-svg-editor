@@ -1,79 +1,113 @@
-import React, { useRef, useCallback } from 'react';
-import { View, StyleSheet } from 'react-native';
+import React, { useRef, useCallback, useState } from 'react';
+import { View, StyleSheet, Text } from 'react-native';
 import { TouchableOpacity, PanGestureHandler, State } from 'react-native-gesture-handler';
 import ReactNativeHapticFeedback from "react-native-haptic-feedback";
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, interpolate } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, interpolate, interpolateColor } from 'react-native-reanimated';
 
 import BlurView from '../components/BlurView';
 import { showColorPicker } from '../components/ColorPicker';
+import { valueOrDefault } from '../utils';
 
 const styles = StyleSheet.create({
   control: {
     position: 'relative',
-    width: 50,
-    height: 50,
-    borderRadius: 50,
+    width: 45,
+    height: 45,
+    borderRadius: 45,
     overflow: 'hidden',
     
     alignItems: "center",
     justifyContent: 'center',
   },
+  sliderBackground: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: 'white',
+  },
+  displayText: {
+    color: "#f2f2f7",
+    fontSize: 17,
+    lineHeight: 22,
+    fontWeight: 'bold',
+  }
 })
 
-const Controller = ({ control, setSelected, updateSelected, iconComponent : IconComponent=(<></>) }) => {
-  const controlView = (
-    <View style={styles.control}>
-      <BlurView
-        blurType="materialDark"
-        blurAmount={8}
-        reducedTransparencyFallbackColor={"#333"} />
-      
-      <IconComponent control={control} />
-    </View>
-  );
+const Controller = ({ control, canvasRef={}, setSelected, updateSelected, iconComponent : IconComponent=(<></>) }) => {
+  const defaultValue = control['default'];
+  const elementRef = canvasRef.current?.getSelectedElementRef();
 
+  // reanimated shared value
   const animation = useSharedValue(0);
 
+  // state variables
+  const [displayValue, setDisplayValue] = useState(null);
+
   const delta = useRef(0);
-  const value = useRef(16);
+  const value = valueOrDefault(elementRef?.current?.lastAttributes[control.prop], defaultValue);
 
   const onPan = useCallback(({ nativeEvent: { translationY } }) => {
-    let diff = translationY/1.3;
+    let diff = translationY;
+    let setValue = Math.max(Math.floor(value - diff), 1);
     delta.current = diff;
-    updateSelected({[control.prop]: value.current - diff});
-  }, [control]);
+
+    setDisplayValue(`${setValue}`);
+    updateSelected({[control.prop]: setValue});
+  }, [control, value]);
 
   const onPanStateChanged = useCallback(({ nativeEvent: { oldState, state } }) => {
-    const vibrateMethod = Platform.select({
+    const beginVibrateMethod = Platform.select({
       "ios": 'impactLight',
       "android": 'soft',
     })
+
+    const failedVibrateMethod = Platform.select({
+      "ios": 'notificationError',
+      "android": 'notificationError',
+    });
+
+    const successVibrateMethod = Platform.select({
+      "ios": "notificationSuccess",
+      "android": 'soft',
+    });
     
     const vibrateOptions = {
       enableVibrateFallback: true,
-      ignoreAndroidSystemSettings: false
     };
 
     if (state === State.BEGAN) {
       console.log('Pan Began');
-      ReactNativeHapticFeedback.trigger(vibrateMethod, vibrateOptions);
+      animation.value = 0;
+      animation.value = withTiming(1, { duration: 200 });
+    } else if (state === State.ACTIVE) {
+      ReactNativeHapticFeedback.trigger(beginVibrateMethod, vibrateOptions);
     } else if (state === State.FAILED) {
       console.log('Pan Failed');
-      animation.value = 0;
-      animation.value = withTiming(1);
-      ReactNativeHapticFeedback.trigger("notificationError", vibrateOptions);
+      animation.value = withTiming(0);
+      ReactNativeHapticFeedback.trigger(failedVibrateMethod, vibrateOptions);
     } else if (oldState === State.ACTIVE) {
       console.log('Pan End');
-      setSelected({[control.prop]: value.current - delta.current});
-      ReactNativeHapticFeedback.trigger("notificationSuccess", vibrateOptions);
+      animation.value = withTiming(0);
+      setSelected({[control.prop]: value - delta.current});
+      ReactNativeHapticFeedback.trigger(successVibrateMethod, vibrateOptions);
+
+      setDisplayValue(null);
     }
-  }, [control]);
+  }, [control, value]);
 
   const sliderStyle = useAnimatedStyle(() => {
     return {
       transform: [{
-        translateX: interpolate(animation.value, [0, 0.3, 0.6, 1], [0, -3, 3, 0])
+        translateY: interpolate(animation.value, [0, 1], [0, -8])
       }]
+    }
+  }, [])
+
+  const sliderBackgroundStyle = useAnimatedStyle(() => {
+    return {
+      opacity: animation.value,
     }
   }, [])
 
@@ -86,7 +120,14 @@ const Controller = ({ control, setSelected, updateSelected, iconComponent : Icon
 
     return (
       <TouchableOpacity onPress={onPress}>
-        { controlView }
+        <View style={styles.control}>
+          <BlurView
+            blurType="materialDark"
+            blurAmount={8}
+            reducedTransparencyFallbackColor={"#333"} />
+          
+          <IconComponent control={control} />
+        </View>
       </TouchableOpacity>
     );
   } else if (control.type === 'slider') {
@@ -95,13 +136,33 @@ const Controller = ({ control, setSelected, updateSelected, iconComponent : Icon
         onGestureEvent={onPan}
         onHandlerStateChange={onPanStateChanged}>
         <Animated.View style={sliderStyle}>
-          { controlView }
+          <View style={styles.control}>
+            <Animated.View style={[styles.sliderBackground, sliderBackgroundStyle]} />
+            <BlurView
+              blurType="materialDark"
+              blurAmount={8}
+              reducedTransparencyFallbackColor={"#333"} />
+            
+            { displayValue ? 
+              <Text style={styles.displayText}>{ displayValue }</Text> :
+              <IconComponent control={control} />
+            }
+          </View>
         </Animated.View>
       </PanGestureHandler>
     )
   }
 
-  return controlView;
+  return (
+    <View style={styles.control}>
+      <BlurView
+        blurType="materialDark"
+        blurAmount={8}
+        reducedTransparencyFallbackColor={"#333"} />
+      
+      <IconComponent control={control} />
+    </View>
+  );
 };
 
 export default Controller;

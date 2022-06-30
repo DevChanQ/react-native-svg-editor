@@ -78,6 +78,8 @@ class SvgItem extends React.PureComponent {
   }
 
   componentDidMount() {
+    const attributes = this.props.info.get('attributes').toJS();
+    this.onInit(attributes);
     this._onRefresh(this.props.info.get('attributes').toJS());
   }
 
@@ -112,6 +114,10 @@ class SvgItem extends React.PureComponent {
 
   get attributes() {
     return this.state.attributes;
+  }
+
+  get lastAttributes() {
+    return this._lastAttributes;
   }
 
   get locked() {
@@ -273,6 +279,12 @@ class SvgItem extends React.PureComponent {
    */
   onValueRefreshed = (changed) => {};
 
+  /**
+   * Called on componentDidMount
+   * @param {object} attributes Object that contains the initial attributes 
+   */
+  onInit = (attributes) => {};
+
   onResize = ({nativeEvent: {translationX, translationY}}) => {
     this.scale({translationX, translationY});
   };
@@ -289,6 +301,7 @@ class SvgItem extends React.PureComponent {
 
   onPanStateChanged = ({nativeEvent: {oldState, state}}) => {
     if (state === State.BEGAN) {
+      this._onSingleTap();
       if (this.props.onPanBegan) {
         this.props.onPanBegan(this.props.id);
       }
@@ -300,15 +313,12 @@ class SvgItem extends React.PureComponent {
     }
   };
 
-  _onSingleTap = ({nativeEvent: {oldState}}) => {
-    if (oldState === State.ACTIVE) {
-      // check if point overlaps
-      if (this.props.onTap) {
-        this.props.onTap({
-          id: this.props.id,
-          svgson: this.props.info,
-        });
-      }
+  _onSingleTap = () => {
+    if (this.props.onTap) {
+      this.props.onTap({
+        id: this.props.id,
+        svgson: this.props.info,
+      });
     }
   };
 
@@ -445,7 +455,9 @@ class SvgItem extends React.PureComponent {
       ]}>
         {
           !this.locked ? (
-            <PanGestureHandler onGestureEvent={this.onResize} onHandlerStateChange={this.onResizeStateChanged}>
+            <PanGestureHandler
+              onGestureEvent={this.onResize}
+              onHandlerStateChange={this.onResizeStateChanged}>
               <View style={[
                 styles.resizeBox,
                 { borderColor: this.locked ? '#B7B7B7' : this.controlColor }
@@ -486,24 +498,20 @@ class SvgItem extends React.PureComponent {
       }}>
         {this.renderContent()}
         <TapGestureHandler
-          onHandlerStateChange={this._onSingleTap}
-          waitFor={this._doubleTapRef}>
-          <TapGestureHandler
-            ref={this._doubleTapRef}
-            enabled={!this.locked}
-            onHandlerStateChange={this._onDoubleTap}
-            numberOfTaps={2}>
-              <PanGestureHandler
-                enabled={this.translateEnabled}
-                minPointers={1}
-                maxPointers={1}
-                onGestureEvent={this.onPan}
-                onHandlerStateChange={this.onPanStateChanged}>
-                <View style={{position: 'absolute', width, height}}>
-                  { this.selected ? this.renderControlLayer() : null }
-                </View>
-              </PanGestureHandler>
-          </TapGestureHandler>
+          ref={this._doubleTapRef}
+          enabled={!this.locked}
+          onHandlerStateChange={this._onDoubleTap}
+          numberOfTaps={2}>
+            <PanGestureHandler
+              enabled={!this.locked}
+              minPointers={1}
+              maxPointers={1}
+              onGestureEvent={this.onPan}
+              onHandlerStateChange={this.onPanStateChanged}>
+              <View style={{position: 'absolute', width, height}}>
+                { this.selected ? this.renderControlLayer() : null }
+              </View>
+            </PanGestureHandler>
         </TapGestureHandler>
       </View>
     );
@@ -719,10 +727,16 @@ class SvgTextItem extends SvgItem {
     attributes['appX'] = valueOrDefault(attributes['appX'], attributes['x'] || 0);
     attributes['appY'] = valueOrDefault(attributes['appY'], attributes['y'] || 0);
     attributes['font-size'] = valueOrDefault(attributes['font-size'], 16);
-    attributes['width'] = valueOrDefault(attributes['width'], 400);
+    attributes['width'] = valueOrDefault(attributes['width'], 200);
     attributes['height'] = valueOrDefault(attributes['height'], 80);
 
     return attributes;
+  }
+
+  onInit = (attributes) => {
+    if (attributes['width'] && attributes['height']) {
+      this.manuallyEdited = true;
+    }
   }
 
   onValueRefreshed = (changed) => {
@@ -745,10 +759,10 @@ class SvgTextItem extends SvgItem {
 
       // delete attributes['appX'];
       // delete attributes['appY'];
-    }
 
-    delete attributes['width'];
-    delete attributes['height'];
+      delete attributes['width'];
+      delete attributes['height'];
+    }
     
     return info;
   }
@@ -774,7 +788,7 @@ class SvgTextItem extends SvgItem {
       let height = heights.reduce((p, v) => ( p > v ? p : v ), 0), width = widths.reduce((p, v) => p + v, 0);
       let size = {width: width || 100, height: height || 100};
 
-      this.setAttributes({width: Math.round(size.width), height: Math.round(size.height)}, false);
+      this.setAttributes({width: Math.round(size.width+2), height: Math.round(size.height)}, false);
 
       this.baselineOffset = lines[0]?.ascender || 0;
       this.valueRefreshed = false;
@@ -788,6 +802,7 @@ class SvgTextItem extends SvgItem {
   renderContent() {
     const {children} = this.props.info.toJS(), {attributes, editMode} = this.state;
     const style = {
+      position: 'absolute',
       fontSize: attributes['font-size'] || 16,
       fontWeight: `${attributes['font-weight'] || 'normal'}`,
       color: attributes['fill'] || 'black',

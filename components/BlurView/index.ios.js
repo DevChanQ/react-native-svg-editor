@@ -2,7 +2,7 @@ import React from 'react';
 import { BlurView } from "@react-native-community/blur";
 import { StyleSheet } from "react-native";
 
-import { getiOSVersion } from '@/utils';
+import { getiOSVersion } from '../../utils'
 
 export default ({ style, blurType, ...props }) => {
   if (getiOSVersion() < 13) {

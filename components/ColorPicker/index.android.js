@@ -1,11 +1,11 @@
 import { Navigation } from "react-native-navigation";
-import ColorPicker from './ColorPicker';
+import ColorPicker, { COMPONENT_NAME } from './ColorPicker';
 
 export default ColorPicker;
 export const showColorPicker = (onColorChange=() => {}, initialColor="#000") => {
   Navigation.showOverlay({
     component: {
-      name: 'COLOR_PICKER',
+      name: COMPONENT_NAME,
       passProps: {
         onConfirm: onColorChange,
         initialColor,

@@ -77,6 +77,6 @@ ColorPicker.options = {
   },
 }
 
-Navigation.registerComponent(COMPONENT_NAME, () => WrappedComponent(ColorPicker));
+Navigation.registerComponent(COMPONENT_NAME, () => ColorPicker);
 
 export default ColorPicker;

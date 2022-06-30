@@ -2,14 +2,14 @@ import { Navigation } from "react-native-navigation";
 import ColorPickerIOS from 'react-native-color-picker-ios';
 
 import { getiOSVersion } from "@/utils";
-import ColorPicker from './ColorPicker';
+import ColorPicker, { COMPONENT_NAME } from './ColorPicker';
 
 export default ColorPicker;
 export const showColorPicker = (onColorChange=color => {}, initialColor) => {
   if (getiOSVersion() < 14) {
     Navigation.showOverlay({
       component: {
-        name: 'COLOR_PICKER',
+        name: COMPONENT_NAME,
         passProps: {
           onConfirm: onColorChange,
           initialColor,
