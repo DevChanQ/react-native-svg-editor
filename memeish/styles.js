@@ -125,7 +125,10 @@ export const createStyleSheet = (theme={}) => {
       borderBottomRightRadius: 14,
     },
     tableCellSeparator: {
-      width: '100%',
+      position: 'absolute',
+      bottom: 0,
+      right: 0,
+      left: 48,
       height: oneRealPixel,
       backgroundColor: borderColor,
     },

@@ -4,15 +4,16 @@ import { TouchableOpacity } from 'react-native-gesture-handler';
 
 import defaultStyles from './styles'
 
-export const SettingsItem = ({ item: { title }, onPress=() => {}, first, last }) => {
+export const SettingsItem = ({ item: { title }, onPress=() => {}, first, last, style, labelStyle }) => {
   const CELL = (
     <View style={[
       defaultStyles.tableCell,
       first ? defaultStyles.tableCellFirst : {},
       last ? defaultStyles.tableCellLast : {},
+      style
     ]}>
       <Text
-        style={defaultStyles.tableCellTitle}
+        style={[defaultStyles.tableCellTitle, labelStyle]}
         numberOfLines={1}>{title}</Text>
     </View>
   );
@@ -22,8 +23,8 @@ export const SettingsItem = ({ item: { title }, onPress=() => {}, first, last })
   );
 }
 
-export const ItemSeparator = () => {
+export const ItemSeparator = ({ style }) => {
   return (
-    <View style={defaultStyles.tableCellSeparator} />
+    <View style={[defaultStyles.tableCellSeparator, style]} />
   )
 }

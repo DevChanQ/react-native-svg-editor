@@ -655,7 +655,7 @@ class SvgEditor extends React.PureComponent {
     const {canvasSize, watermark} = this.state;
 
     const {width, height} = canvasSize;
-    const watermarkWidth = PixelRatio.roundToNearestPixel(width/3.5);
+    const watermarkWidth = PixelRatio.roundToNearestPixel(width/4);
 
     console.log(watermarkStyle)
 
