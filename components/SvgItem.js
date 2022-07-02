@@ -296,19 +296,25 @@ class SvgItem extends React.PureComponent {
   };
 
   onPan = ({nativeEvent: {translationX, translationY}}) => {
-    this.translate({translationX, translationY});
+    if (this.translateEnabled) {
+      this.translate({translationX, translationY});
+    }
   };
 
   onPanStateChanged = ({nativeEvent: {oldState, state}}) => {
     if (state === State.BEGAN) {
       this._onSingleTap();
+
       if (this.props.onPanBegan) {
         this.props.onPanBegan(this.props.id);
       }
     } else if (oldState === State.ACTIVE) {
-      this.setAttributes(this.state.attributes);
-      if (this.props.onPanEnded) {
-        this.props.onPanEnded(this.props.id);
+      if (this.translateEnabled) {
+        this.setAttributes(this.state.attributes);
+        
+        if (this.props.onPanEnded) {
+          this.props.onPanEnded(this.props.id);
+        }
       }
     }
   };
@@ -503,7 +509,6 @@ class SvgItem extends React.PureComponent {
           onHandlerStateChange={this._onDoubleTap}
           numberOfTaps={2}>
             <PanGestureHandler
-              enabled={!this.locked}
               minPointers={1}
               maxPointers={1}
               onGestureEvent={this.onPan}
@@ -807,6 +812,14 @@ class SvgTextItem extends SvgItem {
       fontWeight: `${attributes['font-weight'] || 'normal'}`,
       color: attributes['fill'] || 'black',
     };
+
+    if (attributes['font-family']) {
+      style['fontFamily'] = attributes['font-family'];
+      
+      // if (Platform.OS === 'android') {
+      //   style['fontFamily'] = attributes['font-family'].toLowerCase().replace('-', '_');
+      // }
+    }
 
     if (editMode) {
       return (
