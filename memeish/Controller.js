@@ -11,9 +11,9 @@ import { valueOrDefault } from '../utils';
 const styles = StyleSheet.create({
   control: {
     position: 'relative',
-    width: 45,
-    height: 45,
-    borderRadius: 45,
+    width: 48,
+    height: 48,
+    borderRadius: 48,
     overflow: 'hidden',
     
     alignItems: "center",
@@ -151,6 +151,25 @@ const Controller = ({ control, canvasRef={}, setSelected, updateSelected, iconCo
         </Animated.View>
       </PanGestureHandler>
     )
+  } else if (control.type === 'switch') {
+    const onPress = () => {
+      setSelected({[
+        control.prop]: value == control.trueValue ? control.falseValue : control.trueValue
+      });
+    };
+
+    return (
+      <TouchableOpacity onPress={onPress}>
+        <View style={styles.control}>
+          <BlurView
+            blurType="materialDark"
+            blurAmount={8}
+            reducedTransparencyFallbackColor={"#333"} />
+          
+          <IconComponent control={control} value={value} />
+        </View>
+      </TouchableOpacity>
+    );
   }
 
   return (
