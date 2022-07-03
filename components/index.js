@@ -16,6 +16,7 @@ import SvgItem, {
   SvgPlainItem,
   SvgTextItem,
   SvgImageItem,
+  SvgUseItem,
 } from './SvgItem';
 import SvgPathItem from './SvgPathItem';
 
@@ -112,6 +113,7 @@ const ITEM_MAPPING = {
   text: SvgTextItem,
   image: SvgImageItem,
   img: SvgImageItem,
+  use: SvgUseItem,
 };
 
 
@@ -655,7 +657,7 @@ class SvgEditor extends React.PureComponent {
     const {canvasSize, watermark} = this.state;
 
     const {width, height} = canvasSize;
-    const watermarkWidth = PixelRatio.roundToNearestPixel(width/4);
+    const watermarkWidth = PixelRatio.roundToNearestPixel(width/6);
 
     console.log(watermarkStyle)
 

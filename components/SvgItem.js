@@ -132,6 +132,16 @@ class SvgItem extends React.PureComponent {
     return this.props.selected;
   }
 
+  get transformAttributes() {
+    return {
+      'rotate': this.state.attributes['devjeff:rotate'] || 0,
+      'scaleX': this.state.attributes['devjeff:scaleX'] || 1,
+      'scaleY': this.state.attributes['devjeff:scaleY'] || 1,
+      'skewX': this.state.attributes['devjeff:skewX'] || 0,
+      'skewY': this.state.attributes['devjeff:skewY'] || 0,
+    }
+  }
+
   /**
    * Called when exporting to svg. Cleans attributes (remove internal attributes)
    * @param {Boolean} external Indicate whether the svgson object should be cleaned for external use or not
@@ -142,7 +152,7 @@ class SvgItem extends React.PureComponent {
     let attributes = {...this.state.attributes};
 
     if (external) {
-      let rotate = parseFloat(attributes['rotate'] || 0);
+      let rotate = parseFloat(attributes['devjeff:rotate'] || 0);
       if (rotate) {
         let appX = attributes['appX'] || 0, appY = attributes['appY'] || 0;
         attributes['transform'] = `rotate(${rotate} ${appX} ${appY})`;
@@ -151,7 +161,7 @@ class SvgItem extends React.PureComponent {
       attributes['x'] = attributes['appX'] || 0;
       attributes['y'] = attributes['appY'] || 0;
 
-      delete attributes['rotate'];
+      delete attributes['devjeff:rotate'];
       // delete attributes['appX'];
       // delete attributes['appY'];
     }
@@ -179,14 +189,26 @@ class SvgItem extends React.PureComponent {
     let attributes = {...a};
 
     attributes['devjeff:locked'] = valueOrDefault(attributes['devjeff:locked'], 0);
+
+    // transform attributes init
     if (attributes['transform']) {
       let transforms = attributes['transform'].split(")").filter(transform => !!transform);
       
       for (let transform of transforms) {
         let [command, values] = transform.split("(");
         values = values.split(" ");
+        console.log(values);
         if (command === 'rotate') {
-          attributes['rotate'] = attributes['rotate'] >= 0 ? attributes['rotate'] : parseFloat(values[0]);
+          attributes['devjeff:rotate'] = parseFloat(values[0]);
+        } else if (command === 'translate') {
+
+        } else if (command === 'scale') {
+          attributes['devjeff:scaleX'] = valueOrDefault(parseFloat(values[0]), 1);
+          attributes['devjeff:scaleY'] = valueOrDefault(parseFloat(values[1]), 1);
+        } else if (command === 'skewX') {
+          attributes['devjeff:skewX'] = parseFloat(values[0]);
+        } else if (command === 'skewY') {
+          attributes['devjeff:skewY'] = parseFloat(values[0]);
         }
       }
     }
@@ -222,9 +244,15 @@ class SvgItem extends React.PureComponent {
     let {attributes} = info;
 
     for (let key in attributes) {
-      let num = parseFloat(attributes[key]);
-      if (!isNaN(num)) {
-        attributes[key] = num;
+      if (attributes[key] === "true" || attributes[key] === "false") {
+        // boolean value
+        attributes[key] = attributes[key] === "true";
+      } else {
+        // number value
+        let num = parseFloat(attributes[key]);
+        if (!isNaN(num)) {
+          attributes[key] = num;
+        }
       }
     }
 
@@ -487,8 +515,9 @@ class SvgItem extends React.PureComponent {
   }
 
   render() {
-    let {appX=0, appY=0, rotate=0} = this.state.attributes;
+    let {appX=0, appY=0} = this.state.attributes;
     let {width, height} = this.getSize();
+    let {rotate, scaleX, scaleY} = this.transformAttributes;
     let left = appX, top = appY;
 
     width = PixelRatio.roundToNearestPixel(width), height = PixelRatio.roundToNearestPixel(height);
@@ -500,9 +529,24 @@ class SvgItem extends React.PureComponent {
       <View style={{
         position: 'absolute',
         width, height, left, top,
-        transform: [{translateX: -width/2}, {translateY: -height/2}, {rotate: `${rotate}deg`}, {translateX: width/2}, {translateY: height/2},]
+        transform: [
+
+          {translateX: -width/2},
+          {translateY: -height/2},
+          {rotate: `${rotate}deg`},
+          {translateX: width/2},
+          {translateY: height/2},
+
+        ]
       }}>
-        {this.renderContent()}
+        <View style={{
+          transform: [
+            {scaleX},
+            {scaleY},
+          ]
+        }}>
+          {this.renderContent()}
+        </View>
         <TapGestureHandler
           ref={this._doubleTapRef}
           enabled={!this.locked}
@@ -731,9 +775,11 @@ class SvgTextItem extends SvgItem {
 
     attributes['appX'] = valueOrDefault(attributes['appX'], attributes['x'] || 0);
     attributes['appY'] = valueOrDefault(attributes['appY'], attributes['y'] || 0);
-    attributes['font-size'] = valueOrDefault(attributes['font-size'], 16);
     attributes['width'] = valueOrDefault(attributes['width'], 200);
     attributes['height'] = valueOrDefault(attributes['height'], 80);
+    attributes['font-size'] = valueOrDefault(attributes['font-size'], 16);
+
+    attributes['text-shadow'] = valueOrDefault(attributes['text-shadow'], false);
 
     return attributes;
   }
@@ -815,10 +861,12 @@ class SvgTextItem extends SvgItem {
 
     if (attributes['font-family']) {
       style['fontFamily'] = attributes['font-family'];
-      
-      // if (Platform.OS === 'android') {
-      //   style['fontFamily'] = attributes['font-family'].toLowerCase().replace('-', '_');
-      // }
+    }
+
+    if (attributes['text-shadow']) {
+      style['textShadowOffset'] = { height: 5 };
+      style['textShadowRadius'] = 3;
+      style['textShadowColor'] = '#00000078';
     }
 
     if (editMode) {
@@ -926,6 +974,10 @@ class SvgImageItem extends SvgItem {
   }
 }
 
+class SvgUseItem extends SvgItem {
+
+}
+
 export default SvgItem;
 export {
   SvgItem,
@@ -936,6 +988,7 @@ export {
   SvgPlainItem,
   SvgTextItem,
   SvgImageItem,
+  SvgUseItem,
 
   SvgAsyncItem,
 };
