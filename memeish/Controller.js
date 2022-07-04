@@ -11,9 +11,11 @@ import { valueOrDefault } from '../utils';
 const styles = StyleSheet.create({
   control: {
     position: 'relative',
-    width: 48,
-    height: 48,
+    width: 45,
+    height: 45,
     borderRadius: 48,
+    borderWidth: 1,
+    borderColor: '#3a3a3c',
     overflow: 'hidden',
     
     alignItems: "center",
@@ -45,19 +47,38 @@ const Controller = ({ control, canvasRef={}, setSelected, updateSelected, iconCo
   // state variables
   const [displayValue, setDisplayValue] = useState(null);
 
-  const delta = useRef(0);
   const value = valueOrDefault(elementRef?.current?.lastAttributes[control.prop], defaultValue);
 
-  const onPan = useCallback(({ nativeEvent: { translationY } }) => {
-    let diff = translationY;
-    let setValue = Math.max(Math.floor(value - diff), 1);
-    delta.current = diff;
+  let lastValueX = null, lastValueY = null;
+  if (control.type === 'slider') {
+    lastValueX = valueOrDefault(elementRef?.current?.lastAttributes[control.prop[0]], defaultValue[0]);
+    lastValueY = valueOrDefault(elementRef?.current?.lastAttributes[control.prop[1]], defaultValue[1]);
+  }
 
-    setDisplayValue(`${setValue}`);
-    updateSelected({[control.prop]: setValue});
-  }, [control, value]);
+  const onPan = useCallback(({ nativeEvent: { translationX, translationY } }) => {
+    let updatedAttributes = {};
+    let values = [];
+    if (control.prop[0]) {
+      let diff = translationX;
+      let setValue = Math.floor(lastValueX - diff);
+      updatedAttributes[control.prop[0]] = setValue;
 
-  const onPanStateChanged = useCallback(({ nativeEvent: { oldState, state } }) => {
+      values.push(setValue);
+    } 
+
+    if (control.prop[1]) {
+      let diff = translationY;
+      let setValue = Math.floor(lastValueY - diff);
+      updatedAttributes[control.prop[1]] = setValue;
+
+      values.push(setValue);
+    }
+
+    setDisplayValue(`${values.join(',')}`);
+    updateSelected(updatedAttributes);
+  }, [control, lastValueX, lastValueY]);
+
+  const onPanStateChanged = useCallback(({ nativeEvent: { oldState, state, translationX, translationY } }) => {
     const beginVibrateMethod = Platform.select({
       "ios": 'impactLight',
       "android": 'soft',
@@ -90,12 +111,20 @@ const Controller = ({ control, canvasRef={}, setSelected, updateSelected, iconCo
     } else if (oldState === State.ACTIVE) {
       console.log('Pan End');
       animation.value = withTiming(0);
-      setSelected({[control.prop]: value - delta.current});
       ReactNativeHapticFeedback.trigger(successVibrateMethod, vibrateOptions);
 
+      let updatedAttributes = {};
+      if (control.prop[0]) {
+        updatedAttributes[control.prop[0]] = lastValueX - translationX;
+      }
+      if (control.prop[1]) {
+        updatedAttributes[control.prop[1]] = lastValueY - translationY;
+      }
+
       setDisplayValue(null);
+      setSelected(updatedAttributes);
     }
-  }, [control, value]);
+  }, [control, lastValueX, lastValueY]);
 
   const sliderStyle = useAnimatedStyle(() => {
     return {
