@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SvgXml } from "react-native-svg";
-import { PanGestureHandler, State, TapGestureHandler } from 'react-native-gesture-handler';
+import { State, PanGestureHandler, PinchGestureHandler, TapGestureHandler } from 'react-native-gesture-handler';
 import RNFS from 'react-native-fs';
 import { stringify } from "svgson";
 
@@ -151,6 +151,7 @@ class SvgItem extends React.PureComponent {
     let info = this.props.info.toJS();
     let attributes = {...this.state.attributes};
 
+    // TODO: external transform
     if (external) {
       let rotate = parseFloat(attributes['devjeff:rotate'] || 0);
       if (rotate) {
@@ -400,17 +401,26 @@ class SvgItem extends React.PureComponent {
   /**
    * Scale function, override to customize
    */
-  scale({translationX, translationY}) {
-    let {width, height} = this._lastAttributes;
-    width += translationX / this.getScale();
-    height += translationY / this.getScale();
+  scale({ translationX, translationY, scale }) {
+    let {width, height, appX, appY} = this._lastAttributes;
+    let updatedAttributes = { width, height, appX, appY };
 
-    if (this.aspectLocked) {
-      if (this.aspectRatio > 1) height = width / this.aspectRatio;
-      else width = height * this.aspectRatio;
+    if (scale) {
+      updatedAttributes['width'] *= scale;
+      updatedAttributes['height'] *= scale;
+      updatedAttributes['appX'] -= (updatedAttributes['width'] - width)/2;
+      updatedAttributes['appY'] -= (updatedAttributes['height'] - height)/2;
+    } else {
+      updatedAttributes['width'] += translationX / this.getScale();
+      updatedAttributes['height'] += translationY / this.getScale();
+
+      if (this.aspectLocked) {
+        if (this.aspectRatio > 1) updatedAttributes['height'] = updatedAttributes['width'] / this.aspectRatio;
+        else updatedAttributes['width'] = updatedAttributes['height'] * this.aspectRatio;
+      }
     }
 
-    this.updateAttributes({ width, height })
+    this.updateAttributes(updatedAttributes)
   }
 
   /**
@@ -865,7 +875,7 @@ class SvgTextItem extends SvgItem {
     }
 
     if (attributes['text-shadow']) {
-      style['textShadowOffset'] = { height: 5 };
+      style['textShadowOffset'] = { height: 3 };
       style['textShadowRadius'] = 3;
       style['textShadowColor'] = '#00000078';
     }
@@ -917,7 +927,17 @@ class SvgImageItem extends SvgItem {
     }
   };
 
-  _onImageLoadError = () => this.setState({imageError: true})
+  _onImageLoadError = () => this.setState({imageError: true});
+
+  _onPinchGestureEvent = ({ nativeEvent: { scale } }) => {
+    this.scale({ scale });
+  }
+
+  _onPinchHandlerStateChange = ({ nativeEvent: { oldState } }) => {
+    if (oldState === State.ACTIVE) {
+      this.setAttributes(this.state.attributes);
+    }
+  }
 
   toSvgson(external=true) {
     let info = super.toSvgson(external), {attributes} = info;
@@ -972,6 +992,19 @@ class SvgImageItem extends SvgItem {
         resizeMode="contain"
         source={imageSource} />
     );
+  }
+
+  renderControlLayer() {
+    const controlLayer = super.renderControlLayer();
+
+    return (
+      <PinchGestureHandler
+        enabled={!this.locked && this.selected}
+        onHandlerStateChange={this._onPinchHandlerStateChange}
+        onGestureEvent={this._onPinchGestureEvent}>
+        { controlLayer }
+      </PinchGestureHandler>
+    )
   }
 }
 
