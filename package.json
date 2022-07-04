@@ -1,6 +1,10 @@
 {
   "name": "react-native-svg-editor",
   "version": "0.0.1",
+  "description": "React Native SVG Editor Library",
+  "author": "DevJeff <jeffrey@devjeff.info>",
+  "license": "MIT",
+  "homepage": "https://devjeff.info",
   "peerDependencies": {
     "react-native": "^0.68.1",
     "react-native-gesture-handler": "^2.4.2",
