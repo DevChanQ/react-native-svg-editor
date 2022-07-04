@@ -11,9 +11,9 @@ import { valueOrDefault } from '../utils';
 const styles = StyleSheet.create({
   control: {
     position: 'relative',
-    width: 45,
-    height: 45,
-    borderRadius: 48,
+    width: 38,
+    height: 38,
+    borderRadius: 38,
     borderWidth: 1,
     borderColor: '#3a3a3c',
     overflow: 'hidden',
