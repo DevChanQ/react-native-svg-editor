@@ -517,7 +517,7 @@ class SvgItem extends React.PureComponent {
   render() {
     let {appX=0, appY=0} = this.state.attributes;
     let {width, height} = this.getSize();
-    let {rotate, scaleX, scaleY} = this.transformAttributes;
+    let {rotate, scaleX, scaleY, skewX, skewY} = this.transformAttributes;
     let left = appX, top = appY;
 
     width = PixelRatio.roundToNearestPixel(width), height = PixelRatio.roundToNearestPixel(height);
@@ -530,13 +530,14 @@ class SvgItem extends React.PureComponent {
         position: 'absolute',
         width, height, left, top,
         transform: [
+          {skewX: `${skewX}deg`},
+          {skewY: `${skewY}deg`},
 
           {translateX: -width/2},
           {translateY: -height/2},
           {rotate: `${rotate}deg`},
           {translateX: width/2},
           {translateY: height/2},
-
         ]
       }}>
         <View style={{
