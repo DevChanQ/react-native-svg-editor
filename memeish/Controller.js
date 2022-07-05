@@ -14,7 +14,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 48,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: '#3a3a3c',
     overflow: 'hidden',
     
@@ -55,6 +55,8 @@ const successVibrateMethod = Platform.select({
 const vibrateOptions = {
   enableVibrateFallback: true,
 };
+
+const blurType = "thinMaterialDark";
 
 const Controller = ({
   control,
@@ -114,10 +116,7 @@ const Controller = ({
   }, [control, lastValueX, lastValueY]);
 
   const onPanStateChanged = useCallback(({ nativeEvent: { oldState, state, translationX, translationY } }) => {
-    if (state === State.FAILED) {
-      console.log('Pan Failed');
-      ReactNativeHapticFeedback.trigger(failedVibrateMethod, vibrateOptions);
-    } else if (oldState === State.ACTIVE) {
+    if (oldState === State.ACTIVE) {
       console.log('Pan End');
       ReactNativeHapticFeedback.trigger(successVibrateMethod, vibrateOptions);
 
@@ -131,12 +130,12 @@ const Controller = ({
 
       setSelected(updatedAttributes);
     }
-  }, [control, lastValueX, lastValueY]);
+  }, [control, lastValueX, lastValueY, setActivated]);
 
   const sliderStyle = useAnimatedStyle(() => {
     return {
       transform: [{
-        translateY: interpolate(animation.value, [0, 1], [0, -24])
+        translateY: interpolate(animation.value, [0, 1], [0, -29])
       }]
     }
   }, [])
@@ -158,7 +157,7 @@ const Controller = ({
       <TouchableOpacity onPress={onPress}>
         <View style={styles.control}>
           <BlurView
-            blurType="materialDark"
+            blurType={blurType}
             blurAmount={8}
             reducedTransparencyFallbackColor={"#333"} />
           
@@ -186,7 +185,7 @@ const Controller = ({
               <View style={styles.control}>
                 {/* <Animated.View style={[styles.sliderBackground, sliderBackgroundStyle]} /> */}
                 <BlurView
-                  blurType="materialDark"
+                  blurType={blurType}
                   blurAmount={8}
                   reducedTransparencyFallbackColor={"#333"} />
                 
@@ -212,7 +211,7 @@ const Controller = ({
       <TouchableOpacity onPress={onPress}>
         <View style={styles.control}>
           <BlurView
-            blurType="materialDark"
+            blurType={blurType}
             blurAmount={8}
             reducedTransparencyFallbackColor={"#333"} />
           
@@ -225,7 +224,7 @@ const Controller = ({
   return (
     <View style={styles.control}>
       <BlurView
-        blurType="materialDark"
+        blurType={blurType}
         blurAmount={8}
         reducedTransparencyFallbackColor={"#333"} />
       

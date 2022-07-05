@@ -129,7 +129,7 @@ export const createStyleSheet = (theme={}) => {
       bottom: 0,
       right: 0,
       left: 48,
-      height: oneRealPixel,
+      height: 1,
       backgroundColor: borderColor,
     },
     tableCellTitle: {
