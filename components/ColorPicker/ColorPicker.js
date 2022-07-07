@@ -28,7 +28,6 @@ const styles = StyleSheet.create({
 
 export const COMPONENT_NAME = 'memeish.ColorPicker';
 
-// TODO: Implement native iOS 14 Color Picker
 const ColorPicker = ({ componentId, initialColor="#ffffff", onConfirm=() => {} }) => {
   const color = useRef(null);
   const onColorChangeComplete = useCallback(c => {

@@ -11,6 +11,8 @@ export * from './components/SvgItem';
 class SvgEditorManagerObject {
   fonts = [];
   
+  textToPath = SvgEditorNativeModule.textToPath;
+  
   loadFont(url) {
     SvgEditorNativeModule.createFontWithUrl(url).then(fontFamily => {
       
@@ -18,6 +20,7 @@ class SvgEditorManagerObject {
 
     });
   }
+
 }
 
 export const SvgEditorManager = new SvgEditorManagerObject();
