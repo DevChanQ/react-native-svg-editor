@@ -93,8 +93,6 @@ const Controller = ({
   }, [activated]);
 
   const onPan = useCallback(({ nativeEvent: { translationX, translationY } }) => {
-    if (!activated) return;
-
     let updatedAttributes = {};
     let values = [];
     if (control.prop[0]) {
@@ -115,14 +113,10 @@ const Controller = ({
 
     setDisplayValue(`${values.join(',')}`);
     updateSelected(updatedAttributes);
-  }, [control, activated, lastValueX, lastValueY]);
+  }, [control, lastValueX, lastValueY]);
 
   const onPanStateChanged = useCallback(({ nativeEvent: { oldState, state, translationX, translationY } }) => {
-    if (state === State.FAILED) {
-      setActivated(activated ? null : control.prop);
-    } else if (oldState === State.ACTIVE) {
-      if (!activated) return;
-      
+    if (oldState === State.ACTIVE) {
       console.log('Pan End');
       ReactNativeHapticFeedback.trigger(successVibrateMethod, vibrateOptions);
 
@@ -136,7 +130,7 @@ const Controller = ({
 
       setSelected(updatedAttributes);
     }
-  }, [control, lastValueX, lastValueY, activated]);
+  }, [control, lastValueX, lastValueY]);
 
   const sliderStyle = useAnimatedStyle(() => {
     return {
@@ -172,26 +166,33 @@ const Controller = ({
       </TouchableOpacity>
     );
   } else if (control.type === 'slider') {
+    const onPress = () => {
+      setActivated(activated ? null : control.prop);
+    };
+
     return (
       <PanGestureHandler
+        enabled={activated}
         onGestureEvent={onPan}
         onHandlerStateChange={onPanStateChanged}>
-
         <Animated.View style={sliderStyle}>
-          <View style={styles.control}>
-            {/* <Animated.View style={[styles.sliderBackground, sliderBackgroundStyle]} /> */}
-            <BlurView
-              blurType={blurType}
-              blurAmount={8}
-              reducedTransparencyFallbackColor={"#333"} />
-            
-            { activated ? 
-              <Text style={styles.displayText}>{ displayValue }</Text> :
-              <IconComponent control={control} />
-            }
-          </View>
-        </Animated.View>
+      
+          <TouchableOpacity onPress={onPress}>
+            <View style={styles.control}>
+              {/* <Animated.View style={[styles.sliderBackground, sliderBackgroundStyle]} /> */}
+              <BlurView
+                blurType={blurType}
+                blurAmount={8}
+                reducedTransparencyFallbackColor={"#333"} />
+              
+              { activated ? 
+                <Text style={styles.displayText}>{ displayValue }</Text> :
+                <IconComponent control={control} />
+              }
+            </View>
+          </TouchableOpacity>
 
+        </Animated.View>
       </PanGestureHandler>
     )
   } else if (control.type === 'switch') {
