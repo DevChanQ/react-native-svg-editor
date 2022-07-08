@@ -34,14 +34,14 @@ const styles = StyleSheet.create({
     marginTop: -8,
   },
   controlPoint: {
-    width: 6,
-    height: 6,
+    width: 12,
+    height: 12,
     position: 'absolute',
     backgroundColor: 'white',
     borderWidth: 1,
     borderColor: '#19A0FB',
-    marginLeft: -3,
-    marginTop: -3,
+    marginLeft: -6,
+    marginTop: -6,
   },
   controlPointLine: {
 
@@ -50,6 +50,8 @@ const styles = StyleSheet.create({
 
 const MemorizedPoint = ({scale, point, onPan: givenOnPan, onPanEnd, children}) => {
   const _lastPoint = useRef(point);
+
+  
 
   let onPanStateChanged = useCallback(({nativeEvent: {oldState}}) => {
     if (oldState === State.ACTIVE) {
@@ -81,59 +83,108 @@ const TargetPoint = ({scale, point, onPan, onPanEnd, onPointTap}) => {
   );
 }
 
-const ControlPoint = ({scale, point, onPan, onPanEnd, onPointTap}) => {
+const ControlPoint = ({scale, point, onPan, onPanEnd, onPointTap, debug}) => {
+  if (debug) {
+    console.log('ControlPoint.point: ', point);
+  }
+
   return (
     <MemorizedPoint scale={scale} point={point} onPan={onPan} onPanEnd={onPanEnd}>
       <TapGestureHandler onHandlerStateChange={e => onPointTap(e, point)}>
-        <View style={[styles.controlPoint, {top: point.y, left: point.x, transform: [{scale: 1/scale}]}]} />
+        <View style={[styles.controlPoint, debug ? {borderColor: 'red'} : {}, {top: point.y, left: point.x, transform: [{scale: 1/scale}]}]} />
       </TapGestureHandler>
     </MemorizedPoint>
   );
 }
 
-const EditLayer = ({lineStyle, viewBox, targetPoints, controlPoints, targetPointUpdated, ...pointProps}) => {
-  let controlPointLines = controlPoints.map(point => {
-    return point.relations ? point.relations.map(rel => {
-      return (
-        <Line x1={point.x} y1={point.y} x2={rel.x} y2={rel.y} stroke="#ababab" strokeWidth="0.3" />
-      )
-    }) : [];
-  }).flat();
+class EditLayer extends React.PureComponent {
 
-  targetPoints = targetPoints.map((point) => {
-    const onPan = event => {
-      if (targetPointUpdated) targetPointUpdated(point, event)
+  componentDidUpdate() {
+    this._controlPoints = null;
+    this._targetPoints = null;
+  }
+
+  get controlPoints() {
+    if (!this._controlPoints) {
+      this._controlPoints = this.props.parsedPath.controlLocations().filter(point => point.movable);
     }
+    return this._controlPoints;
+  }
 
-    return (
-      <TargetPoint {...pointProps} point={point} onPan={onPan} />
-    )
-  })
-
-  controlPoints = controlPoints.map((point) => {
-    const onPan = event => {
-      if (targetPointUpdated) targetPointUpdated(point, event)
+  get targetPoints() {
+    if (!this._targetPoints) {
+      this._targetPoints = this.props.parsedPath.targetLocations().filter(point => point.movable);
     }
-    
-    return (
-      <ControlPoint {...pointProps} point={point} onPan={onPan} />
-    )
-  })
+    return this._targetPoints;
+  }
 
-  const {startPoint} = pointProps;
+  get lineStyle() {
+    return this.props.lineStyle || {};
+  }
+
+  render() {
+    console.log('EditLayer.render')
+
+    let { 
+      lineStyle,
+      viewBox,
+      targetPointUpdated,
+      parsedPath,
+
+      ...pointProps
+    } = this.props;
+
+    let controlPointLines = this.controlPoints.map(point => {
+      return point.relations ? point.relations.map(rel => {
+        return (
+          <Line x1={point.x} y1={point.y} x2={rel.x} y2={rel.y} stroke="#ababab" strokeWidth="1" />
+        )
+      }) : [];
+    }).flat();
+
+    targetPoints = this.targetPoints.map((point) => {
+      const onPan = event => {
+        if (targetPointUpdated) targetPointUpdated(point, event)
+      }
   
+      return (
+        <TargetPoint
+          {...pointProps}
+          point={point}
+          onPan={onPan} />
+          // key={`target_${point.x},${point.y}`} 
+      )
+    });
 
-  return (
-    <View style={styles.absolute}>
-      <ReactSvg style={[{position: 'absolute'}, lineStyle]} viewBox={viewBox}>
-        { controlPointLines }
-      </ReactSvg>
-      <View style={{transform: [{translateX: -startPoint.x}, {translateY: -startPoint.y}]}}>
-        {targetPoints}
-        {controlPoints}
+    controlPoints = this.controlPoints.map((point, index) => {
+      const onPan = event => {
+        if (targetPointUpdated) targetPointUpdated(point, event)
+      }
+
+      return (
+        <ControlPoint
+          {...pointProps}
+          point={{x: point.x, y: point.y}}
+          onPan={onPan} />
+          // key={`control_${point.x},${point.y}`}
+      )
+    });
+
+    const {startPoint={x: 0, y: 0}} = pointProps;
+
+    return (
+      <View style={styles.absolute}>
+        <ReactSvg style={[{position: 'absolute'}, this.lineStyle]} viewBox={viewBox}>
+          { controlPointLines }
+        </ReactSvg>
+        <View style={{transform: [{translateX: -startPoint.x}, {translateY: -startPoint.y}]}}>
+          { targetPoints }
+          { controlPoints }
+        </View>
       </View>
-    </View>
-  )
+    );
+  }
+
 }
 
 class SvgPathItem extends SvgItem {
@@ -147,8 +198,11 @@ class SvgPathItem extends SvgItem {
   }
 
   get startPoint() {
-    let {left=0, top=0} = this.state.attributes;
-    return {x: left, y: top}
+    const { left, top } = this.state.attributes;
+    if (!this._startPoint) {
+      this._startPoint = {x: left, y: top};
+    }
+    return {x: left, y: top};
   }
 
   get strokeWidth() {
@@ -156,7 +210,8 @@ class SvgPathItem extends SvgItem {
   }
 
   onValueRefreshed = (changed) => {
-    this.parsedPath = new Svg(this.state.attributes['d']);
+    this.parsedPath = new Svg(this._lastAttributes['d']);
+    this._startPoint = null;
   }
 
   refreshValues() {
@@ -201,26 +256,26 @@ class SvgPathItem extends SvgItem {
   };
 
   onTap = ({nativeEvent: {oldState, x, y}}, point) => {
-    if (oldState === State.ACTIVE) {
-      console.log(point);
-      if (this.MODE === PathState.START) {
-        parsedPath.current.insert(PathItem.Make(['M', x.toString(), y.toString()]))
-        this.updatePathPermanent();
-      } else if (this.MODE === PathState.IN_PROGRESS) {
-        if (!point) {
-          this.parsedPath.insert(PathItem.Make(['L', x.toString(), y.toString()]))
-          this.updatePathPermanent();
-        } else if (point.itemReference === parsedPath.current.path[0]) {
-          this.parsedPath.insert(PathItem.Make(['Z']))
-          this.updatePathPermanent();
-        }
-      } else if (this.MODE === PathState.CLOSED) {
-        if (point) {
-          this.parsedPath.changeType(point.itemReference, CurveTo.key);
-          this.updatePathPermanent();
-        }
-      }
-    }
+    // if (oldState === State.ACTIVE) {
+    //   console.log(point);
+    //   if (this.MODE === PathState.START) {
+    //     this.parsedPath.current.insert(PathItem.Make(['M', x.toString(), y.toString()]))
+    //     this.updatePathPermanent();
+    //   } else if (this.MODE === PathState.IN_PROGRESS) {
+    //     if (!point) {
+    //       this.parsedPath.insert(PathItem.Make(['L', x.toString(), y.toString()]))
+    //       this.updatePathPermanent();
+    //     } else if (point.itemReference === this.parsedPath.current.path[0]) {
+    //       this.parsedPath.insert(PathItem.Make(['Z']))
+    //       this.updatePathPermanent();
+    //     }
+    //   } else if (this.MODE === PathState.CLOSED) {
+    //     if (point) {
+    //       this.parsedPath.changeType(point.itemReference, CurveTo.key);
+    //       this.updatePathPermanent();
+    //     }
+    //   }
+    // }
   };
 
   onEditEnd = () => {
@@ -237,7 +292,7 @@ class SvgPathItem extends SvgItem {
 
     let { left, top } = rect;
     let { left: oldLeft, top: oldTop, appX, appY } = this._lastAttributes;
-    
+
     appX += left - oldLeft;
     appY += top - oldTop;
 
@@ -282,10 +337,16 @@ class SvgPathItem extends SvgItem {
       left: x0, top: y0, right: x1, bottom: y1,
     };
 
+    for (let key in rect) {
+      rect[key] = parseFloat(rect[key].toFixed(2));
+    }
+
+    console.log(rect);
+
     return rect;
   }
 
-  scale({translationX, translationY}) {
+  scale({ translationX, translationY }) {
     let {width, height} = this._lastAttributes;
     let newWidth = width + translationX / this.getScale(), newHeight = height + translationY / this.getScale();
 
@@ -311,8 +372,7 @@ class SvgPathItem extends SvgItem {
 
   renderControlLayer() {
     const {scale = 1} = this.props;
-    const {attributes, editMode} = this.state;
-    const parsedPath = this.parsedPath;
+    const {editMode, attributes} = this.state;
 
     if (!editMode) {
       return super.renderControlLayer();
@@ -332,15 +392,14 @@ class SvgPathItem extends SvgItem {
 
     return (
       <EditLayer
-        scale={scale}
+        scale={Math.max(scale, 0.1)}
         onPointTap={this.onTap}
         onPanEnd={this.onEditEnd}
-        startPoint={this.startPoint}
         viewBox={this.getParentViewBox()}
-        lineStyle={{width, height, left: translateX, top: translateY, transform: [{scale: svgScale}]}}
         targetPointUpdated={this.targetPointUpdated}
-        controlPoints={parsedPath.controlLocations().filter(point => point.movable)}
-        targetPoints={parsedPath.targetLocations().filter(point => point.movable)} />
+        lineStyle={{width, height, left: translateX, top: translateY, transform: [{scale: svgScale}]}}
+        startPoint={this.startPoint}
+        parsedPath={this.parsedPath} />
     )
   }
 
