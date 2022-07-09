@@ -1,3 +1,5 @@
+import PropTypes from 'prop-types';
+
 import React from 'react';
 import {
   View,
@@ -434,7 +436,7 @@ class SvgItem extends React.PureComponent {
   }
 
   getScale() {
-    return this.props.scale || 1;
+    return this.props.scale;
   }
 
   /**
@@ -528,10 +530,11 @@ class SvgItem extends React.PureComponent {
     let {appX=0, appY=0} = this.state.attributes;
     let {width, height} = this.getSize();
     let {rotate, scaleX, scaleY, skewX, skewY} = this.transformAttributes;
+    let {disabled} = this.props;
     let left = appX, top = appY;
 
-    width = PixelRatio.roundToNearestPixel(width), height = PixelRatio.roundToNearestPixel(height);
-    left = PixelRatio.roundToNearestPixel(appX), top = PixelRatio.roundToNearestPixel(appY);
+    // width = PixelRatio.roundToNearestPixel(width), height = PixelRatio.roundToNearestPixel(height);
+    // left = PixelRatio.roundToNearestPixel(appX), top = PixelRatio.roundToNearestPixel(appY);
 
     this._calculateInternalScale();
 
@@ -560,18 +563,19 @@ class SvgItem extends React.PureComponent {
         </View>
         <TapGestureHandler
           ref={this._doubleTapRef}
-          enabled={!this.locked}
+          enabled={!this.locked && !disabled}
           onHandlerStateChange={this._onDoubleTap}
           numberOfTaps={2}>
-            <PanGestureHandler
-              minPointers={1}
-              maxPointers={1}
-              onGestureEvent={this.onPan}
-              onHandlerStateChange={this.onPanStateChanged}>
-              <View style={{position: 'absolute', width, height}}>
-                { this.selected ? this.renderControlLayer() : null }
-              </View>
-            </PanGestureHandler>
+          <PanGestureHandler
+            enabled={!disabled}
+            minPointers={1}
+            maxPointers={1}
+            onGestureEvent={this.onPan}
+            onHandlerStateChange={this.onPanStateChanged}>
+            <View style={{position: 'absolute', width, height}}>
+              { this.selected ? this.renderControlLayer() : null }
+            </View>
+          </PanGestureHandler>
         </TapGestureHandler>
       </View>
     );
@@ -1011,6 +1015,25 @@ class SvgImageItem extends SvgItem {
 class SvgUseItem extends SvgItem {
 
 }
+
+SvgItem.propTypes = {
+  info: PropTypes.object.isRequired,
+  id: PropTypes.string.isRequired,
+  
+  scale: PropTypes.number,
+  disabled: PropTypes.bool,
+  selected: PropTypes.bool,
+
+  onPanBegan: PropTypes.func,
+  onPanEnded: PropTypes.func,
+  onTap: PropTypes.func,
+  offsetPositionToGuideline: PropTypes.func,
+};
+SvgItem.defaultProps = {
+  disabled: false,
+  selected: false,
+  scale: 1,
+};
 
 export default SvgItem;
 export {
