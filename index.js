@@ -10,10 +10,18 @@ export * from './components/SvgItem';
 
 class SvgEditorManagerObject {
   fonts = [];
-  
-  textToPath = SvgEditorNativeModule.textToPath;
+
+  constructor() {
+    if (!SvgEditorNativeModule) {
+      this._nativeModuleNotAvailable = true;
+    } else {
+      this.textToPath = SvgEditorNativeModule.textToPath;
+    }
+  }
   
   loadFont(url) {
+    if (this._nativeModuleNotAvailable) return;
+    
     SvgEditorNativeModule.createFontWithUrl(url).then(fontFamily => {
       
     }).catch(error => {
