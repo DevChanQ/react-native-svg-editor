@@ -102,6 +102,10 @@ class SvgItem extends React.PureComponent {
     }
   }
 
+  get id() {
+    return this.props.id;
+  }
+
   get type() {
     return this.props.info?.get('name');
   }

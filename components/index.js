@@ -83,7 +83,12 @@ const styles = StyleSheet.create({
 });
 
 class SvgGroupItem extends SvgItem {
-  render() {
+  // getSize() {
+  //   const {attributes: {width=100, height=100}} = this.state;
+  //   return {width, height};
+  // }
+
+  renderContent() {
     let svgson = this.props.info, children = svgson.get('children');
 
     return children.map((child, index) => {
@@ -94,10 +99,10 @@ class SvgGroupItem extends SvgItem {
       const ItemType = ITEM_MAPPING[name] || SvgEmptyItem;
       return (
         <ItemType
-          {...this.props}
           info={info} 
-          key={id}
-          id={id} />
+          id={id}
+          disabled={true}
+          key={id} />
       );
     })
   }
@@ -280,6 +285,18 @@ class SvgEditor extends React.PureComponent {
           case 'remove':
             children.splice(targetIndex, 1);
             delete this.itemRefs[target];
+            break;
+          case 'moveFront':
+            if (targetIndex < children.length-1) {
+              let moveFrontEle = children.splice(targetIndex, 1)[0];
+              children.splice(targetIndex+1, 0, moveFrontEle);
+            }
+            break;
+          case 'moveBack':
+            if (targetIndex > 0) {
+              let moveBackEle = children.splice(targetIndex, 1)[0];
+              children.splice(targetIndex-1, 0, moveBackEle);
+            }
             break;
           default:
             break;
