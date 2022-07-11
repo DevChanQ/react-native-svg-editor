@@ -118,7 +118,6 @@ const ITEM_MAPPING = {
   text: SvgTextItem,
   image: SvgImageItem,
   img: SvgImageItem,
-  use: SvgUseItem,
 };
 
 

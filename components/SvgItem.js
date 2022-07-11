@@ -256,8 +256,8 @@ class SvgItem extends React.PureComponent {
         attributes[key] = attributes[key] === "true";
       } else {
         // number value
-        let num = parseFloat(attributes[key]);
-        if (!isNaN(num)) {
+        let num = Number(attributes[key]);
+        if (!Number.isNaN(num)) {
           attributes[key] = num;
         }
       }
@@ -780,7 +780,7 @@ class SvgCircleItem extends SvgItem {
 
 class SvgPlainItem extends SvgItem {
   onSvgLayout = ({nativeEvent}) => {
-    console.log(nativeEvent.layout);
+    // console.log(nativeEvent.layout);
   }
 }
 

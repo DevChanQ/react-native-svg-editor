@@ -110,7 +110,7 @@ export const createStyleSheet = (theme={}) => {
     },
   
     tableContentContainer: {
-      padding: 16
+      padding: 16,
     },
     tableCell: {
       backgroundColor: primaryLightColor,
