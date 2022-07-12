@@ -137,7 +137,7 @@ class EditLayer extends React.PureComponent {
     let controlPointLines = this.controlPoints.map(point => {
       return point.relations ? point.relations.map(rel => {
         return (
-          <Line x1={point.x} y1={point.y} x2={rel.x} y2={rel.y} stroke="#ababab" strokeWidth="1" />
+          <Line x1={point.x} y1={point.y} x2={rel.x} y2={rel.y} stroke="#7c7c80" strokeWidth={1/this.props.scale} />
         )
       }) : [];
     }).flat();
@@ -366,6 +366,13 @@ class SvgPathItem extends SvgItem {
   getParentViewBox() {
     const {attributes} = this.state;
     let viewBox = `${attributes.left} ${attributes.top} ${attributes.width} ${attributes.height}`;
+    
+    return viewBox;
+  }
+
+  getControlLineViewBox() {
+    const {attributes} = this.state;
+    let viewBox = `${attributes.left * 2} ${attributes.top * 2} ${attributes.width * 2} ${attributes.height * 2}`;
     
     return viewBox;
   }
