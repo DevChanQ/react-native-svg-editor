@@ -123,9 +123,9 @@ const ITEM_MAPPING = {
 
 class SvgEditor extends React.PureComponent {
   state = {
-    // current scale vector of the PinchZoomView
+    /** Current scale vector of the PinchZoomView */
     scale: 1,
-
+    /** ID of selected element */
     selected: null,
     historyPointer: -1,
     canvasSize: {
@@ -142,6 +142,7 @@ class SvgEditor extends React.PureComponent {
   }
 
   history = [];
+  clipboard = null;
 
   svgson = null;
   viewShot = React.createRef();
@@ -561,6 +562,36 @@ class SvgEditor extends React.PureComponent {
     this.setState({ historyPointer: this.history.length });
   }
 
+  /**
+   * Copy element with given id
+   * @param {string} id Element ID
+   * @returns {Promise} Promise that resolves once element is copied
+   */
+  copy(id) {
+    return Promise.resolve(this.itemRefs[id]?.current?.toSvgson(false)).then(obj => {
+      this.clipboard = obj;
+    });
+  }
+
+  copySelectedElement() {
+    return this.copy(this.state.selected);
+  }
+
+  paste() {
+    if (this.clipboard) {
+      this.addElement(this.clipboard);
+    }
+  }
+
+  /**
+   * Duplicate Selected Element
+   * @returns {Promise} Promise that resolves once duplicated
+   */
+  duplicateSelectedElement() {
+    return this.copy(this.state.selected).then(() => {
+      this.paste();
+    })
+  }
   
   addElement(ele) {
     this.push({

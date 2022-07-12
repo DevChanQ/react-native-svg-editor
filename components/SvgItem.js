@@ -11,7 +11,7 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
-import { SvgXml } from "react-native-svg";
+import Svg, { SvgXml, Path } from "react-native-svg";
 import { State, PanGestureHandler, PinchGestureHandler, TapGestureHandler } from 'react-native-gesture-handler';
 import RNFS from 'react-native-fs';
 import { stringify } from "svgson";
@@ -145,13 +145,14 @@ class SvgItem extends React.PureComponent {
       'scaleY': this.state.attributes['devjeff:scaleY'] || 1,
       'skewX': this.state.attributes['devjeff:skewX'] || 0,
       'skewY': this.state.attributes['devjeff:skewY'] || 0,
+      'matrix': this.state.attributes['devjeff:matrix'] || [],
     }
   }
 
   /**
-   * Called when exporting to svg. Cleans attributes (remove internal attributes)
+   * Get svgson of the SvgItem. Called when exporting to svg. Cleans attributes (remove internal attributes)
    * @param {Boolean} external Indicate whether the svgson object should be cleaned for external use or not
-   * @returns {object} cleaned svgson object
+   * @returns {object,Promise} cleaned svgson object / Promise that resolves to svgson object
    */
   toSvgson(external=true) {
     let info = this.props.info.toJS();
@@ -485,11 +486,28 @@ class SvgItem extends React.PureComponent {
 
     let svgScale = 1/this._internalScale, translateX = -((width - ogWidth)/2), translateY = -((height - ogHeight)/2);
 
+    // let content = null;
+    // if (this.props.info.get('name') == 'path') {
+    //   let { attributes } = this.props.info.toObject();
+    //   attributes = this.transform(attributes);
+    //   let viewBox = this.getParentViewBox();
+    //   content = (
+    //     <Svg width="100%" height="100%" viewBox={viewBox}>
+    //       <Path {...attributes} />
+    //     </Svg>
+    //   )
+    // } else {
+    //   const xml = this._generateXML();
+    //   content = (
+    //     <SvgXml width="100%" height="100%" xml={xml} />
+    //   );
+    // }
+
     const xml = this._generateXML();
 
     return (
       <View style={{width, height, transform: [{translateX}, {translateY}, {scale: svgScale}]}}>
-        <SvgXml width='100%' height='100%' xml={xml} />
+        <SvgXml width="100%" height="100%" xml={xml} />
       </View>
     );
   }
@@ -533,7 +551,7 @@ class SvgItem extends React.PureComponent {
   render() {
     let {appX=0, appY=0} = this.state.attributes;
     let {width, height} = this.getSize();
-    let {rotate, scaleX, scaleY, skewX, skewY} = this.transformAttributes;
+    let {rotate, scaleX, scaleY, skewX, skewY, matrix} = this.transformAttributes;
     let {disabled} = this.props;
     let left = appX, top = appY;
 
