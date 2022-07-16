@@ -135,9 +135,16 @@ class EditLayer extends React.PureComponent {
     } = this.props;
 
     let controlPointLines = this.controlPoints.map(point => {
+      const offset = 0;//(16 * (1/this.props.scale)) / 2;
       return point.relations ? point.relations.map(rel => {
         return (
-          <Line x1={point.x} y1={point.y} x2={rel.x} y2={rel.y} stroke="#7c7c80" strokeWidth={1/this.props.scale} />
+          <Line
+            x1={point.x + offset}
+            y1={point.y + offset}
+            x2={rel.x + offset}
+            y2={rel.y + offset}
+            stroke="#7c7c80"
+            strokeWidth={1/this.props.scale} />
         )
       }) : [];
     }).flat();
@@ -230,7 +237,7 @@ class SvgPathItem extends SvgItem {
 
     return { ...rect, ...attributes };
   }
-
+  
   toSvgson(external=true) {
     let info = super.toSvgson(), {attributes} = info;
     let {appX, appY, d} = this.attributes, path = new Svg(d);
@@ -340,8 +347,6 @@ class SvgPathItem extends SvgItem {
     for (let key in rect) {
       rect[key] = parseFloat(rect[key].toFixed(2));
     }
-
-    console.log(rect);
 
     return rect;
   }

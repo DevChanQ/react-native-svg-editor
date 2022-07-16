@@ -1,4 +1,4 @@
-const GUIDELINE_OFFSET = 3;
+const GUIDELINE_THRESHOLD = 3;
 
 const getLineGuideStops = (nodes, containerSize) => {
   let {width: containerWidth, height: containerHeight} = containerSize
@@ -64,7 +64,7 @@ const getObjectSnappingEdges = ({
   };
 };
 
-const getGuides = (lineGuideStops, itemBounds, parentOffset={}) => {
+const getGuides = (lineGuideStops, itemBounds, parentOffset={}, threshold=GUIDELINE_THRESHOLD) => {
   let resultV = [];
   let resultH = [];
 
@@ -72,7 +72,7 @@ const getGuides = (lineGuideStops, itemBounds, parentOffset={}) => {
     itemBounds.vertical.forEach(itemBound => {
       let diff = Math.abs(lineGuide - itemBound.guide);
       // if the distance between guild line and object snap point is close we can consider this for snapping
-      if (diff < GUIDELINE_OFFSET) {
+      if (diff < threshold) {
         resultV.push({
           lineGuide: lineGuide,
           diff: diff,
@@ -86,7 +86,7 @@ const getGuides = (lineGuideStops, itemBounds, parentOffset={}) => {
   lineGuideStops.horizontal.forEach(lineGuide => {
     itemBounds.horizontal.forEach(itemBound => {
       let diff = Math.abs(lineGuide - itemBound.guide);
-      if (diff < GUIDELINE_OFFSET) {
+      if (diff < threshold) {
         resultH.push({
           lineGuide: lineGuide,
           diff: diff,
@@ -123,14 +123,13 @@ const getGuides = (lineGuideStops, itemBounds, parentOffset={}) => {
   return guides;
 };
 
-const calculateGuidelines = (selfRect, nodes, containerSize) => {
+const calculateGuidelines = (selfRect, nodes, containerSize, threshold=GUIDELINE_THRESHOLD) => {
   let { x: clientX, y:clientY, width:clientWidth, height:clientHeight } = selfRect;
 
   let lineGuideStops = getLineGuideStops(nodes, containerSize);
   // find snapping points of current object
   let itemBounds = getObjectSnappingEdges({ clientX, clientY, clientWidth, clientHeight });
-  let guides = getGuides(lineGuideStops, itemBounds);
-  // if (this.props.setGuidelines) this.props.setGuidelines(guides);
+  let guides = getGuides(lineGuideStops, itemBounds, {}, threshold);
 
   let absPos = {};
 

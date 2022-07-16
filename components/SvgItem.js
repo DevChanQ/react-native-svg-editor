@@ -18,6 +18,8 @@ import { stringify } from "svgson";
 
 import { mergeDeep, valueOrDefault } from '../utils';
 
+const sizeBoxRect = { width: 98, height: 26 };
+
 const styles = StyleSheet.create({
   absolute: {
     position: 'absolute',
@@ -30,7 +32,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 12,
     height: 12,
-    borderWidth: 2 / PixelRatio.get(),
+    borderWidth: 1,
     right: -12,
     bottom: -12,
     backgroundColor: 'white',
@@ -41,13 +43,12 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     top: 0,
-    borderWidth: 2 / PixelRatio.get(),
+    borderWidth: 1,
   },
   sizeBox: {
     position: 'absolute',
-    padding: 6,
+    ...sizeBoxRect,
     borderRadius: 8,
-    minWidth: 82,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -205,11 +206,10 @@ class SvgItem extends React.PureComponent {
       for (let transform of transforms) {
         let [command, values] = transform.split("(");
         values = values.split(" ");
-        console.log(values);
         if (command === 'rotate') {
           attributes['devjeff:rotate'] = parseFloat(values[0]);
         } else if (command === 'translate') {
-
+          
         } else if (command === 'scale') {
           attributes['devjeff:scaleX'] = valueOrDefault(parseFloat(values[0]), 1);
           attributes['devjeff:scaleY'] = valueOrDefault(parseFloat(values[1]), 1);
@@ -235,7 +235,7 @@ class SvgItem extends React.PureComponent {
 
   _calculateInternalScale() {
     // set interal scale
-    const MAX_SCALE = Platform.select({ 'android': 5, 'ios': 20 }), MIN_SCALE = 0.2
+    const MAX_SCALE = Platform.select({ 'android': 5, 'ios': 15 }), MIN_SCALE = 0.2
     const {width, height} = this.getSize();
     const pixels = width * height * PixelRatio.get();
     const pixelLimit = 512 * 512
@@ -425,13 +425,21 @@ class SvgItem extends React.PureComponent {
         if (this.aspectRatio > 1) updatedAttributes['height'] = updatedAttributes['width'] / this.aspectRatio;
         else updatedAttributes['width'] = updatedAttributes['height'] * this.aspectRatio;
       }
+
+      // calculate guidelines
+      // if (this.props.offsetPositionToGuideline) {
+      //   let { width, height, appX, appY } = updatedAttributes;
+      //   let { x, y } = this.props.offsetPositionToGuideline({x: appX, y: appY, width, height}, this.props.id);
+      //   updatedAttributes['width'] += x - appX;
+      //   updatedAttributes['height'] += y - appY;
+      // }
     }
 
     this.updateAttributes(updatedAttributes)
   }
 
   /**
-   * Function for transforming attributes, override to customize
+   * Function for transforming attributes, override to customize. Called before _generateXml
    * Some attrbiutes of elements such as `<rect>` needs to be transformed under certain situations,
    * for example `<rect>` with `stroke-width`
    * @param {obj} attributes
@@ -467,7 +475,7 @@ class SvgItem extends React.PureComponent {
         name: 'svg',
         type: 'element',
         value: '',
-        attributes: {viewBox: this.getParentViewBox()},
+        attributes: {viewBox: this.getParentViewBox(), preserveAspectRatio: "none" },
         children: [{
           ...this.props.info.toJS(),
           attributes: this.transform(attributes),
@@ -485,24 +493,6 @@ class SvgItem extends React.PureComponent {
     height *= this._internalScale;
 
     let svgScale = 1/this._internalScale, translateX = -((width - ogWidth)/2), translateY = -((height - ogHeight)/2);
-
-    // let content = null;
-    // if (this.props.info.get('name') == 'path') {
-    //   let { attributes } = this.props.info.toObject();
-    //   attributes = this.transform(attributes);
-    //   let viewBox = this.getParentViewBox();
-    //   content = (
-    //     <Svg width="100%" height="100%" viewBox={viewBox}>
-    //       <Path {...attributes} />
-    //     </Svg>
-    //   )
-    // } else {
-    //   const xml = this._generateXML();
-    //   content = (
-    //     <SvgXml width="100%" height="100%" xml={xml} />
-    //   );
-    // }
-
     const xml = this._generateXML();
 
     return (
@@ -513,8 +503,10 @@ class SvgItem extends React.PureComponent {
   }
 
   renderControlLayer() {
-    const {width, height} = this.getSize();
+    const {width, height} = this.getSize(), scale = this.getScale();
     const {showSize} = this.props;
+
+    const scaleRatio = Math.min(1/scale, 1);
 
     return (
       <View style={[
@@ -537,8 +529,13 @@ class SvgItem extends React.PureComponent {
           showSize ? <View style={[
             styles.sizeBox,
             {
+              // transform: [
+              //   {scale: scaleRatio},
+              //   {translateX: -sizeBoxRect.width * (1-scaleRatio)},
+              //   {translateY: -sizeBoxRect.height * (1-scaleRatio)},
+              // ],
               backgroundColor: this.locked ? '#B7B7B7' : this.controlColor,
-              top: height+16
+              bottom: -sizeBoxRect.height - 12,
             }
           ]}>
             <Text numberOfLines={1} style={styles.sizeText}>{`${width.toFixed(1)} x ${height.toFixed(1)}`}</Text>
@@ -561,45 +558,49 @@ class SvgItem extends React.PureComponent {
     this._calculateInternalScale();
 
     return (
-      <View style={{
-        position: 'absolute',
-        width, height, left, top,
-        transform: [
-          {skewX: `${skewX}deg`},
-          {skewY: `${skewY}deg`},
+      <TapGestureHandler
+        ref={this._doubleTapRef}
+        enabled={!this.locked && !disabled}
+        onHandlerStateChange={this._onDoubleTap}
+        numberOfTaps={2}>
+        <PanGestureHandler
+          enabled={!disabled}
+          minPointers={1}
+          maxPointers={1}
+          onGestureEvent={this.onPan}
+          onHandlerStateChange={this.onPanStateChanged}>
+          <View style={{
+            position: 'absolute',
+            width, height, left, top,
+            transform: [
+              {skewX: `${skewX}deg`},
+              {skewY: `${skewY}deg`},
 
-          {translateX: -width/2},
-          {translateY: -height/2},
-          {rotate: `${rotate}deg`},
-          {translateX: width/2},
-          {translateY: height/2},
-        ]
-      }}>
-        <View style={{
-          transform: [
-            {scaleX},
-            {scaleY},
-          ]
-        }}>
-          {this.renderContent()}
-        </View>
-        <TapGestureHandler
-          ref={this._doubleTapRef}
-          enabled={!this.locked && !disabled}
-          onHandlerStateChange={this._onDoubleTap}
-          numberOfTaps={2}>
-          <PanGestureHandler
-            enabled={!disabled}
-            minPointers={1}
-            maxPointers={1}
-            onGestureEvent={this.onPan}
-            onHandlerStateChange={this.onPanStateChanged}>
-            <View style={{position: 'absolute', width, height}}>
+              {translateX: -width/2},
+              {translateY: -height/2},
+              {rotate: `${rotate}deg`},
+              {translateX: width/2},
+              {translateY: height/2},
+            ]
+          }}>
+        
+            <View pointerEvents='none' style={{
+              transform: [{scaleX}, {scaleY},]
+            }}>
+              {this.renderContent()}
+            </View>
+
+            <View style={{
+              position: 'absolute',
+              width,
+              height
+            }}>
               { this.selected ? this.renderControlLayer() : null }
             </View>
-          </PanGestureHandler>
-        </TapGestureHandler>
-      </View>
+
+          </View>
+        </PanGestureHandler>
+      </TapGestureHandler>
     );
   }
 }

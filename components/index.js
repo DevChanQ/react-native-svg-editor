@@ -16,7 +16,6 @@ import SvgItem, {
   SvgPlainItem,
   SvgTextItem,
   SvgImageItem,
-  SvgUseItem,
 } from './SvgItem';
 import SvgPathItem from './SvgPathItem';
 
@@ -64,18 +63,18 @@ const styles = StyleSheet.create({
   },
   horizontalGuideline: {
     position: 'absolute',
-    left: 0,
-    right: 0,
-    top: -frameWidth/2,
+    left: -frameWidth,
+    right: -frameWidth,
+    top: -frameWidth,
     height: frameWidth,
     opacity: 0.5,
     backgroundColor: '#fb19a0',
   },
   verticalGuideline: {
     position: 'absolute',
-    top: 0,
-    bottom: 0,
-    left: -frameWidth/2,
+    top: -frameWidth,
+    bottom: -frameWidth,
+    left: -frameWidth,
     width: frameWidth,
     opacity: 0.5,
     backgroundColor: '#fb19a0',
@@ -373,7 +372,9 @@ class SvgEditor extends React.PureComponent {
         return null;
       }).filter(node => !!node);
 
-    let {position, guides} = calculateGuidelines(rect, nodes, this.state.canvasSize);
+    const threshold = Math.max(3 / this.state.scale, 1);
+
+    let {position, guides} = calculateGuidelines(rect, nodes, this.state.canvasSize, threshold);
     this._setGuidelines(guides);
 
     return {
@@ -668,6 +669,7 @@ class SvgEditor extends React.PureComponent {
   }
 
   onZoomEnd = scale => {
+    console.log('onZoomEnd: ', scale);
     this.setState({scale});
   };
 
