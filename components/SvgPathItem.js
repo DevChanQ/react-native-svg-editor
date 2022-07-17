@@ -259,7 +259,7 @@ class SvgPathItem extends SvgItem {
 
   targetPointUpdated = (point, {x, y}) => {
     this.parsedPath.setLocation(point, {x, y});
-    this.updatePath();
+    this.updatePath(true);
   };
 
   onTap = ({nativeEvent: {oldState, x, y}}, point) => {
@@ -293,15 +293,17 @@ class SvgPathItem extends SvgItem {
     this.setState({ editMode: !this.state.editMode });
   }
 
-  updatePath() {
+  updatePath(updateLocation=false) {
     const newPath = this.parsedPath.asString();
     const rect = this.getBoundingBox(newPath, this.strokeWidth);
 
     let { left, top } = rect;
     let { left: oldLeft, top: oldTop, appX, appY } = this._lastAttributes;
 
-    appX += left - oldLeft;
-    appY += top - oldTop;
+    if (updateLocation) {
+      appX += left - oldLeft;
+      appY += top - oldTop;
+    }
 
     this.updateAttributes({
       d: newPath,
