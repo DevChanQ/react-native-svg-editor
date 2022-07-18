@@ -808,6 +808,19 @@ class SvgTextItem extends SvgItem {
   valueRefreshed = true;
   manuallyEdited = false;
 
+  get text() {
+    let children = this.props.info.get("children").toJS();
+    return children.filter(child => child.type === "text")[0]?.value || null;
+  }
+
+  get fontSize() {
+    return this.state.attributes['font-size'] || 16;
+  }
+
+  get fontWeight() {
+    return this.state.attributes['font-weight'] || 'normal';
+  }
+
   _initAttributes(a) {
     let attributes = super._initAttributes(a);
 
