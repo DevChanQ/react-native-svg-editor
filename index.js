@@ -9,7 +9,7 @@ export default SvgEditor;
 export * from './components/SvgItem';
 
 class SvgEditorManagerObject {
-  fonts = [];
+  remoteFonts = null;
 
   constructor() {
     if (!SvgEditorNativeModule) {
@@ -17,6 +17,19 @@ class SvgEditorManagerObject {
     } else {
       this.textToPath = SvgEditorNativeModule.textToPath;
     }
+  }
+
+  async listRemoteFonts() {
+    const url = "https://google-webfonts-helper.herokuapp.com/api/fonts";
+
+    if (!this.remoteFonts) {
+      const fonts = await fetch(url)
+        .then((response) => response.json());
+      
+      this.remoteFonts = fonts;
+    } 
+    
+    return this.remoteFonts;
   }
   
   loadFont(url) {
