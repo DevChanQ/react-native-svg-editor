@@ -11,7 +11,7 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
-import Svg, { SvgXml, Path } from "react-native-svg";
+import Svg, { SvgXml, SvgCss, Path } from "react-native-svg";
 import { State, PanGestureHandler, PinchGestureHandler, TapGestureHandler } from 'react-native-gesture-handler';
 import RNFS from 'react-native-fs';
 import { stringify } from "svgson";
@@ -148,6 +148,23 @@ class SvgItem extends React.PureComponent {
       'skewY': this.state.attributes['devjeff:skewY'] || 0,
       'matrix': this.state.attributes['devjeff:matrix'] || [],
     }
+  }
+
+  /**
+   * Getter for filter
+   */
+  get filters() {
+    let filter = this.state.attributes['filter'];
+    if (filter) {
+      let selector = filter.split('(')[1].slice(0, -1);
+
+      if (this.props.getFilters) {
+        let filters = this.props.getFilters(selector);
+        console.log('SvgItem.filters: ', selector, filters)
+        return filters;
+      }
+    }
+    return [];
   }
 
   /**
@@ -476,11 +493,19 @@ class SvgItem extends React.PureComponent {
         type: 'element',
         value: '',
         attributes: {viewBox: this.getParentViewBox(), preserveAspectRatio: "none" },
-        children: [{
-          ...this.props.info.toJS(),
-          attributes: this.transform(attributes),
-        }]
-      })
+        children: [
+          // {
+          //   name: 'defs',
+          //   type: 'element',
+          //   value: '',
+          //   children: this.filters,
+          // }, 
+          {
+            ...this.props.info.toJS(),
+            attributes: this.transform(attributes),
+          }
+        ]
+      });
     }
 
     return this._cachedXML;
@@ -804,13 +829,15 @@ class SvgPlainItem extends SvgItem {
 }
 
 class SvgTextItem extends SvgItem {
+  // TODO: Implement <tspan>
+
   baselineOffset = 0;
   valueRefreshed = true;
   manuallyEdited = false;
 
   get text() {
-    let children = this.props.info.get("children").toJS();
-    return children.filter(child => child.type === "text")[0]?.value || null;
+    let children = this.props.info.get('children').toJS();
+    return children.filter(child => child.type === "text")[0]?.value || "";
   }
 
   get fontSize() {
@@ -875,11 +902,9 @@ class SvgTextItem extends SvgItem {
 
   onSubmitEditing = ({ nativeEvent: { text }}) => {
     this.setElement({
-      children: {
-        0: {
-          "value": text,
-        }
-      }
+      children: [{
+        "value": text,
+      }]
     });
   }
 
@@ -902,7 +927,8 @@ class SvgTextItem extends SvgItem {
   }
 
   renderContent() {
-    const {children} = this.props.info.toJS(), {attributes, editMode} = this.state;
+    const {attributes, editMode} = this.state;
+
     const style = {
       position: 'absolute',
       fontSize: attributes['font-size'] || 16,
@@ -922,12 +948,12 @@ class SvgTextItem extends SvgItem {
 
     if (editMode) {
       return (
-        <TextInput style={style} defaultValue={children[0]?.value} onBlur={this.onBlur} onSubmitEditing={this.onSubmitEditing} autoFocus blurOnSubmit />
+        <TextInput style={style} defaultValue={this.text} onBlur={this.onBlur} onSubmitEditing={this.onSubmitEditing} autoFocus blurOnSubmit />
       )
     }
 
     return (
-      <Text style={style} onTextLayout={this.onTextLayout} allowFontScaling={false}>{children[0]?.value}</Text>
+      <Text style={style} onTextLayout={this.onTextLayout} allowFontScaling={false}>{this.text}</Text>
     );
   }
 }
