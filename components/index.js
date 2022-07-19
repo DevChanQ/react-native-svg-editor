@@ -1,12 +1,13 @@
+import PropTypes from 'prop-types';
 import React from 'react';
 import { View, ImageBackground, StyleSheet, PixelRatio, Animated, Platform, Alert } from 'react-native';
 import ViewShot, {captureRef} from 'react-native-view-shot';
 import ReactNativeHapticFeedback from "react-native-haptic-feedback";
-import PropTypes from 'prop-types';
+import { mergeDeep } from 'react-native-svg-editor/utils/immutable';
 
 import { parse as svgsonParse, stringify } from 'svgson';
 
-import { fromJS } from 'immutable';
+import Immutable, { fromJS } from 'immutable';
 
 import SvgItem, { 
   SvgRectItem,
@@ -21,7 +22,7 @@ import SvgPathItem from './SvgPathItem';
 
 import PinchZoomView from './PinchZoomView';
 
-import { makeid, mergeDeep } from '../utils';
+import { makeid } from '../utils';
 import cssjs from '../utils/css';
 import calculateGuidelines from '../utils/guidelines';
 
@@ -292,6 +293,10 @@ class SvgEditor extends React.PureComponent {
     return [];
   }
 
+  /**
+   * Get list of Children after applying action history
+   * @returns {Array<Immutable.Map>} Array of svgson object as ImmutableJs Maps
+   */
   _getChildrenAndApplyHistory() {
     const {historyPointer} = this.state;
     const histories = this.history.slice(0, historyPointer);
@@ -307,7 +312,7 @@ class SvgEditor extends React.PureComponent {
       const performAction = (t) => {
         switch (t) {
           case 'set':
-            children[targetIndex] = children[targetIndex].mergeDeep(payload);
+            children[targetIndex] = mergeDeep(children[targetIndex], fromJS(payload));
             break;
           case 'add':
             children.push(fromJS(payload));
