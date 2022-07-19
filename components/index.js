@@ -21,7 +21,7 @@ import SvgPathItem from './SvgPathItem';
 
 import PinchZoomView from './PinchZoomView';
 
-import { makeid } from '../utils';
+import { makeid, mergeDeep } from '../utils';
 import cssjs from '../utils/css';
 import calculateGuidelines from '../utils/guidelines';
 
@@ -149,6 +149,9 @@ class SvgEditor extends React.PureComponent {
 
   parser = new cssjs();
 
+  /** filters definition */
+  filters = [];
+
   // guidelines
   _disableGuideline = false;
   _hGuidelineTranslateY = new Animated.Value(0);
@@ -191,18 +194,32 @@ class SvgEditor extends React.PureComponent {
     // TODO: clean svgson
     let svgson = await svgsonParse(svg);
 
+    let exclude = ['defs', 'style', 'filter'];
+
+    // prepare def elements and style elements
+    this.filters = svgson.children.filter(child => child.name === 'filter');
+    let styleElements = svgson.children.filter(child => child.name === 'style');
+    const defElements = svgson.children.filter(child => child.name === 'defs');
+    for (let defEle of defElements) {
+      let childElements = defEle.children;
+      styleElements = styleElements.concat(childElements.filter(child => child.name === 'style'));
+
+      // set svg global filter
+      this.filters = this.filters.concat(childElements.filter(child => child.name === 'filter'));
+    }
+
     // Parse embedded stylesheet
-    let styles =
-      svgson.children.find(child => child.name === 'style') ||
-      svgson.children.find(child => child.name === 'defs')?.children.find(child => child.name === 'style');
-    
-    if (styles) {
-      let content = styles.children[0].value;
-      styles = this.parser.parseCSS(content);
+    let styles = [];
+    for (let style of styleElements) {
+      let content = style.children[0].value;
+      styles = styles.concat(this.parser.parseCSS(content));
+    }
+
+    if (styles.length > 0) {
       styles = styles.reduce((p, {selector, rules}) => {
         p[selector] = rules;
         return p
-      }, {})
+      }, {});
 
       let checkAndSetChildren = ele => {
         let children = ele.children;
@@ -219,6 +236,9 @@ class SvgEditor extends React.PureComponent {
       };
       checkAndSetChildren(svgson)
     }
+
+    // filter out excluded elements
+    svgson.children = svgson.children.filter(child => !exclude.includes(child.name));
 
     return svgson;
   }
@@ -259,6 +279,17 @@ class SvgEditor extends React.PureComponent {
         });
       });
     }
+  }
+
+  _getFilters = selector => {
+    let isId = selector[0] === '#', name = selector.substring(1);
+    if (isId) {
+      let filters = this.filters.filter(filter => filter.attributes['id'] == name);
+      console.log('SvgEditor._getFilters: ', filters, this.filters);
+      return filters
+    }
+
+    return [];
   }
 
   _getChildrenAndApplyHistory() {
@@ -338,8 +369,10 @@ class SvgEditor extends React.PureComponent {
           ref={this.itemRefs[id]}
           onTap={this._onTap}
           onPanEnded={this._removeGuidelines}
-          setElementById={this.setElementById}
           offsetPositionToGuideline={this._offsetPositionToGuideline}
+          getFilters={this._getFilters}
+          setElementById={this.setElementById}
+
           // locked
           info={child}
           selected={selected === id}
@@ -669,7 +702,6 @@ class SvgEditor extends React.PureComponent {
   }
 
   onZoomEnd = scale => {
-    console.log('onZoomEnd: ', scale);
     this.setState({scale});
   };
 
@@ -702,20 +734,19 @@ class SvgEditor extends React.PureComponent {
 
   render() {
     const svgs = this._generateSVGComponents();
-    const {containerStyle={}, watermarkStyle={}} = this.props;
+    const {containerStyle={}, watermarkStyle={}, pinchZoomViewProps={}} = this.props;
     const {canvasSize, watermark} = this.state;
 
     const {width, height} = canvasSize;
     const watermarkWidth = PixelRatio.roundToNearestPixel(width/6);
-
-    console.log(watermarkStyle)
 
     return (
       <PinchZoomView
         ref={this.pinchZoomViewRef}
         maxScale="4"
         style={[styles.pinchZoomStyle, containerStyle]}
-        onZoomEnd={this.onZoomEnd}>
+        onZoomEnd={this.onZoomEnd}
+        {...pinchZoomViewProps}>
         <View style={styles.frameContainer}>
           <View pointerEvents='none' style={styles.frame} />
           <ViewShot ref={this.viewShot} options={{format: 'jpg'}}>
