@@ -54,7 +54,10 @@ export default class PinchZoomView extends Component {
     super(props);
 
     this._scale = Animated.multiply(this._baseScale, this._pinchScale);
-    this._scale.addListener(({value}) => { this._currentScale = value });
+    this._scale.addListener(({value}) => {
+      if (this.props.onZoom) this.props.onZoom(value);
+      this._currentScale = value;
+    });
 
     this._panX.addListener(({value}) => {
       this._translateX.setValue(PixelRatio.roundToNearestPixel(this._lastOffset.translationX + value / this._currentScale));
@@ -63,15 +66,6 @@ export default class PinchZoomView extends Component {
       this._translateY.setValue(PixelRatio.roundToNearestPixel(this._lastOffset.translationY + value / this._currentScale));
     });
 
-    this.customZoom = !!this.props.onZoom;
-    if (!this.customZoom) {
-      this._onPinchGestureEvent = Animated.event(
-        [{ nativeEvent: { scale: this._pinchScale } }],
-        { useNativeDriver: true }
-      );
-    } else {
-      this._onPinchGestureEvent = this.props.onZoom;
-    }
   }
 
   scaleToFit() {
@@ -132,21 +126,26 @@ export default class PinchZoomView extends Component {
     }
   };
 
-  _onPanHandlerStateChange = ({nativeEvent: {oldState, translationX, translationY}}) => {
-    if (oldState === State.ACTIVE) {
-      this._lastOffset.translationX += translationX / this._currentScale;
-      this._lastOffset.translationY += translationY / this._currentScale;
+  _onPanHandlerStateChange = ({nativeEvent: {oldState, state, translationX, translationY}}) => {
+    // console.log("_onPanHandlerStateChange: ", oldState, state)
+    if (state === State.BEGAN) {
+      if (this.props.onDragBegin) this.props.onDragBegin();
+    } else if (oldState === State.ACTIVE) {
+      this._lastOffset.translationX += (translationX / this._currentScale);
+      this._lastOffset.translationY += (translationY / this._currentScale);
+
+      if (this.props.onDragEnd) this.props.onDragEnd();
+    } else if (state === State.FAILED) {
+      if (this.props.onDragEnd) this.props.onDragEnd();
     }
   };
 
   _onPinchHandlerStateChange = ({ nativeEvent }) => {
-    const { oldState, scale } = nativeEvent;
+    const { oldState, state } = nativeEvent;
     if (oldState === State.ACTIVE) {
       // console.log("PinchZoomView._onPinchHandlerStateChange: oldState === State.ACTIVE");
-      if (!this.customZoom) {
-        this._baseScale.setValue(this._currentScale);
-        this._pinchScale.setValue(1);
-      }
+      this._baseScale.setValue(this._currentScale);
+      this._pinchScale.setValue(1);
 
       if (this.props.onZoomEnd) {
         this.props.onZoomEnd(this._currentScale);
@@ -160,9 +159,12 @@ export default class PinchZoomView extends Component {
     { useNativeDriver: true },
   );
 
+  _onPinchGestureEvent = Animated.event(
+    [{ nativeEvent: { scale: this._pinchScale } }],
+    { useNativeDriver: true }
+  );
+
   _onContentLayout = ({nativeEvent: {layout}}) => {
-    if (this.customZoom) return;
-    
     const {width, height} = layout;
     this.contentSize = { width, height };
     this._opacity.setValue(1);
