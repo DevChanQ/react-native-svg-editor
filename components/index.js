@@ -126,6 +126,7 @@ class SvgEditor extends React.PureComponent {
     /** Current scale vector of the PinchZoomView */
     scale: 1,
     /** ID of selected element */
+    // TODO: Support multiple selected
     selected: null,
     historyPointer: -1,
     canvasSize: {

@@ -6,6 +6,10 @@ import ColorPicker, { COMPONENT_NAME } from './ColorPicker';
 
 export default ColorPicker;
 export const showColorPicker = (onColorChange=color => {}, initialColor) => {
+  // check if initialColor is color
+  initialColor = String(initialColor);
+  if (initialColor[0] !== '#') initialColor = '#000' 
+
   if (getiOSVersion() < 14) {
     Navigation.showOverlay({
       component: {
@@ -20,7 +24,7 @@ export const showColorPicker = (onColorChange=color => {}, initialColor) => {
     ColorPickerIOS.showColorPicker(
       {
         supportsAlpha: false,
-        initialColor: initialColor || "#000"
+        initialColor: initialColor
       },
       color => onColorChange(color.slice(0, 7))
     );
