@@ -7,6 +7,7 @@ import { PanGestureHandler, State, TapGestureHandler } from 'react-native-gestur
 
 import { Svg, CurveTo, SvgItem as PathItem } from './svg';
 import SvgItem from './SvgItem';
+import { valueOrDefault } from '../utils';
 
 const PathState = {
   START: 'S',
@@ -213,7 +214,7 @@ class SvgPathItem extends SvgItem {
   }
 
   get strokeWidth() {
-    return parseFloat(this.state.attributes['stroke-width'] || (this.state.attributes['stroke'] ? 1 : 0));
+    return this.state.attributes['stroke-width']
   }
 
   onValueRefreshed = (changed) => {
@@ -229,7 +230,8 @@ class SvgPathItem extends SvgItem {
   }
 
   _initAttributes(a) {
-    let attributes = super._initAttributes(a), {d} = attributes, strokeWidth = attributes['stroke-width'];
+    let attributes = super._initAttributes(a), {d} = attributes;
+    let strokeWidth = valueOrDefault(attributes['stroke-width'], 0);
     const rect = this.getBoundingBox(d, strokeWidth);
 
     attributes['appX'] = attributes['appX'] === undefined ? rect.left : attributes['appX'];
@@ -334,10 +336,10 @@ class SvgPathItem extends SvgItem {
    */
   getBoundingBox(path, strokeWidth=0) {
     let [x0, y0, x1, y1] = getBBox(path);
-    x0 -= strokeWidth;
-    y0 -= strokeWidth;
-    x1 += strokeWidth;
-    y1 += strokeWidth;
+    x0 -= strokeWidth/2;
+    y0 -= strokeWidth/2;
+    x1 += strokeWidth/2;
+    y1 += strokeWidth/2;
 
     let width = x1-x0, height = y1-y0;
 
