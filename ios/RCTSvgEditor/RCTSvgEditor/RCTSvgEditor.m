@@ -99,31 +99,67 @@ void CGPathApplyCallbackFunction(void* aVisitor, const CGPathElement *element)
     return [mutableResult copy];
 }
 
++(NSString *) registerFontWithData:(NSData *) data {
+    CGDataProviderRef dataProvider = CGDataProviderCreateWithCFData((CFDataRef) data);
+    CGFontRef cgFont = CGFontCreateWithDataProvider(dataProvider);
+    
+    CFErrorRef fontError;
+    if (!CTFontManagerRegisterGraphicsFont(cgFont, &fontError)) {
+        RCTLogInfo(@"CTFontManager Error: %@", fontError);
+        return nil;
+    } else {
+        NSString *fontName = (__bridge NSString *)CGFontCopyPostScriptName(cgFont);
+        return fontName;
+    }
+}
+
 // To export a module named RCTSvgEditor
 RCT_EXPORT_MODULE();
 
-RCT_EXPORT_METHOD(createFontWithUrl:(NSString *) url
+RCT_EXPORT_METHOD(createFontWithLocalFile:(NSString *) url_
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject) {
+    NSError* error = nil;
+    NSURL *documentDirectory = [[[NSFileManager defaultManager] URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask] lastObject];
+    NSURL *fileUrl = [documentDirectory URLByAppendingPathComponent:url_];
+    
+    NSData* data = [NSData dataWithContentsOfURL:fileUrl options:0 error:&error];
+    
+    RCTLogInfo(@"local font data loaded: %@", data);
+    
+    if (error == nil) {
+        NSString *fontFamily = [RCTSvgEditor registerFontWithData:data];
+        
+        if (fontFamily == nil) {
+            reject(@"load_font_error", @"Core Text register font error", nil);
+        } else {
+            resolve(fontFamily);
+        }
+    } else {
+        reject(@"load_font_error", @"Error While Loading File Data", nil);
+    }
+}
+
+RCT_EXPORT_METHOD(createFontWithUrl:(NSString *) url_
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 {
+    NSURL *url = [NSURL URLWithString:url_];
+    
     NSURLSessionConfiguration *config = [NSURLSessionConfiguration defaultSessionConfiguration];
     NSURLSession *session = [NSURLSession sessionWithConfiguration:config];
-    NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:url]];
+    NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:url];
     
     RCTLogInfo(@"Start Loading Font");
     NSURLSessionDataTask *task = [session dataTaskWithRequest:request completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
         if (error == nil) {
             RCTLogInfo(@"GET Font Success");
-            CGDataProviderRef dataProvider = CGDataProviderCreateWithCFData((CFDataRef) data);
-            CGFontRef cgFont = CGFontCreateWithDataProvider(dataProvider);
+            NSString *fontFamily = [RCTSvgEditor registerFontWithData:data];
             
-            CFErrorRef fontError;
-            if (!CTFontManagerRegisterGraphicsFont(cgFont, &fontError)) {
-                RCTLogInfo(@"CTFontManager Error: %@", fontError);
+            if (fontFamily == nil) {
                 reject(@"load_font_error", @"Core Text register font error", nil);
             } else {
-                NSString *fontName = (__bridge NSString *)CGFontCopyPostScriptName(cgFont);
-                resolve(fontName);
+                resolve(fontFamily);
             }
         }
     }];

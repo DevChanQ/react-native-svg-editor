@@ -15,13 +15,17 @@ const extendSVGEditorReducer = (initialState={}, reducer) => {
   };
 
   return (state = DEFAULT_STATE, action = {}) => {
-    const {type, font, premium} = action;
+    const {type, fonts, premium} = action;
 
     switch (type) {
       case ADD_FONT: {
-        let fonts = [...state.fonts];
-        fonts.push(font);
-        return { ...state, fonts }
+        let oldFonts = [...state.fonts], newFonts = [].concat(fonts);
+
+        for (let font of newFonts) {
+          if (font.file && font.id) oldFonts.push(font)
+        }
+        
+        return { ...state, fonts: oldFonts }
       }
       case SET_PREMIUM: {
         return {
