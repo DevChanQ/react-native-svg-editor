@@ -61,6 +61,12 @@ const styles = StyleSheet.create({
 const SvgEmptyItem = () => <></>;
 
 class SvgItem extends React.PureComponent {
+
+  /** Default Props */
+  static defaultProps = {
+    positionOffset: { x: 0, y: 0 }
+ };
+
   // private variables
   _doubleTapRef = React.createRef();
   _lastAttributes = null;
@@ -83,7 +89,7 @@ class SvgItem extends React.PureComponent {
   componentDidMount() {
     const attributes = this.props.info.get('attributes').toJS();
     this.onInit(attributes);
-    this._onRefresh(this.props.info.get('attributes').toJS());
+    this._onRefresh(attributes);
   }
 
   componentDidUpdate({info}) {
@@ -284,6 +290,10 @@ class SvgItem extends React.PureComponent {
     return this._initAttributes(attributes);
   }
 
+  /**
+   * Called Internally after the given attributes is updated/refreshed 
+   * @param {object} changed Attributes that was updated
+   */
   _onRefresh = (changed={}) => {
     // update aspect ratio
     const {width, height} = this.getSize();
@@ -478,6 +488,15 @@ class SvgItem extends React.PureComponent {
     return {width, height};
   }
 
+  /**
+   * Returns position of element
+   * @returns {object} Position object containing width and height
+   */
+  getPosition() {
+    const {attributes: {x=0, y=0}} = this.state;
+    return {x, y};
+  }
+
   getParentViewBox() {
     const {width, height} = this.getSize();
     return `0 0 ${width} ${height}`;
@@ -506,6 +525,8 @@ class SvgItem extends React.PureComponent {
           }
         ]
       });
+
+      console.log(this._cachedXML)
     }
 
     return this._cachedXML;
@@ -530,8 +551,6 @@ class SvgItem extends React.PureComponent {
   renderControlLayer() {
     const {width, height} = this.getSize(), scale = this.getScale();
     const {showSize} = this.props;
-
-    const scaleRatio = Math.min(1/scale, 1);
 
     return (
       <View style={[
@@ -571,7 +590,7 @@ class SvgItem extends React.PureComponent {
   }
 
   render() {
-    let {appX=0, appY=0} = this.state.attributes;
+    let {appX=0, appY=0, opacity=1} = this.state.attributes;
     let {width, height} = this.getSize();
     let {rotate, scaleX, scaleY, skewX, skewY, matrix} = this.transformAttributes;
     let {disabled} = this.props;
@@ -610,7 +629,8 @@ class SvgItem extends React.PureComponent {
           }}>
         
             <View pointerEvents='none' style={{
-              transform: [{scaleX}, {scaleY},]
+              transform: [{scaleX}, {scaleY},],
+              opacity,
             }}>
               {this.renderContent()}
             </View>
@@ -707,7 +727,7 @@ class SvgRectItem extends SvgItem {
   renderContent() {
     let {rx} = this.state.attributes;
     if (!rx) {
-      let {fill: backgroundColor, opacity=1} = this.state.attributes;
+      let {fill: backgroundColor} = this.state.attributes;
       let borderColor = this.state.attributes['stroke'] || '#000000';
       let borderWidth = this.state.attributes['stroke-width'] || 0;
 
@@ -718,7 +738,6 @@ class SvgRectItem extends SvgItem {
           backgroundColor,
           borderWidth,
           borderColor,
-          opacity
         }} />
       )
     } 
@@ -809,6 +828,18 @@ class SvgCircleItem extends SvgItem {
     return attributes;
   }
 
+  transform(a) {
+    let attributes = {...a};
+
+    if (attributes['stroke-width']) {
+      let strokeWidth = attributes['stroke-width'];
+
+      attributes['r'] -= strokeWidth/2;
+    }
+
+    return attributes;
+  }
+
   getSize() {
     const {r} = this.state.attributes;
     return {width: r*2, height: r*2};
@@ -845,7 +876,11 @@ class SvgTextItem extends SvgItem {
   }
 
   get fontWeight() {
-    return this.state.attributes['font-weight'] || 'normal';
+    return this.state.attributes['font-weight'] || '400';
+  }
+
+  get fontFamily() {
+    return this.state.attributes['font-family'];
   }
 
   _initAttributes(a) {
@@ -953,7 +988,10 @@ class SvgTextItem extends SvgItem {
     }
 
     return (
-      <Text style={style} onTextLayout={this.onTextLayout} allowFontScaling={false}>{this.text}</Text>
+      <Text
+        style={style}
+        onTextLayout={this.onTextLayout}
+        allowFontScaling={false}>{this.text}</Text>
     );
   }
 }
@@ -1027,7 +1065,7 @@ class SvgImageItem extends SvgItem {
 
   renderContent() {
     const {attributes, imageError=false} = this.state;
-    const {opacity=1} = attributes, uri = attributes['xlink:href'];
+    const uri = attributes['xlink:href'];
     const imageSource = {uri};
 
     if (imageError) {
@@ -1053,7 +1091,6 @@ class SvgImageItem extends SvgItem {
         style={{
           width: '100%',
           height: '100%',
-          opacity
         }}
         resizeMode="contain"
         source={imageSource} />
