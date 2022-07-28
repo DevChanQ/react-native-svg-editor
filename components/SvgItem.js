@@ -967,9 +967,12 @@ class SvgTextItem extends SvgItem {
     const style = {
       position: 'absolute',
       fontSize: attributes['font-size'] || 16,
-      fontWeight: `${attributes['font-weight'] || 'normal'}`,
       color: attributes['fill'] || 'black',
     };
+
+    if (attributes['font-weight']) {
+      style['fontWeight'] = attributes['font-weight'];
+    }
 
     if (attributes['font-family']) {
       style['fontFamily'] = attributes['font-family'];
