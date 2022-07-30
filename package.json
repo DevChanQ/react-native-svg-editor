@@ -18,6 +18,7 @@
     "react-native-reanimated": "^2.8.0"
   },
   "dependencies": {
+    "@gorhom/portal": "^1.0.14",
     "immutable": "^4.0.0",
     "prop-types": "^15.8.1",
     "svg-path-bbox": "^1.0.2",

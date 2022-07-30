@@ -15,6 +15,7 @@ import Svg, { SvgXml, SvgCss, Path } from "react-native-svg";
 import { State, PanGestureHandler, PinchGestureHandler, TapGestureHandler } from 'react-native-gesture-handler';
 import RNFS from 'react-native-fs';
 import { stringify } from "svgson";
+import { Portal } from '@gorhom/portal';
 
 import { mergeDeep, valueOrDefault } from '../utils';
 
@@ -635,13 +636,14 @@ class SvgItem extends React.PureComponent {
               {this.renderContent()}
             </View>
 
-            <View style={{
-              position: 'absolute',
-              width,
-              height
-            }}>
-              { this.selected ? this.renderControlLayer() : null }
-            </View>
+            <Portal hostName="controlLayerPortal">
+              <View pointerEvents='none' style={{
+                position: 'absolute',
+                width, height, left, top
+              }}>
+                { this.selected ? this.renderControlLayer() : null }
+              </View>
+            </Portal>
 
           </View>
         </PanGestureHandler>

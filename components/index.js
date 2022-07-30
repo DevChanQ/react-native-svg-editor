@@ -4,9 +4,8 @@ import { View, ImageBackground, StyleSheet, PixelRatio, Animated, Platform, Aler
 import ViewShot, {captureRef} from 'react-native-view-shot';
 import ReactNativeHapticFeedback from "react-native-haptic-feedback";
 import { mergeDeep } from 'react-native-svg-editor/utils/immutable';
-
+import { PortalProvider, PortalHost } from '@gorhom/portal';
 import { parse as svgsonParse, stringify } from 'svgson';
-
 import Immutable, { fromJS } from 'immutable';
 
 import SvgItem, { 
@@ -747,29 +746,34 @@ class SvgEditor extends React.PureComponent {
     const watermarkWidth = PixelRatio.roundToNearestPixel(width/6);
 
     return (
-      <PinchZoomView
-        ref={this.pinchZoomViewRef}
-        maxScale="4"
-        style={[styles.pinchZoomStyle, containerStyle]}
-        onZoomEnd={this.onZoomEnd}
-        {...pinchZoomViewProps}>
-        <View style={styles.frameContainer}>
-          <View pointerEvents='none' style={styles.frame} />
-          <ViewShot ref={this.viewShot} options={{format: 'jpg'}}>
-            <View style={{width, height}}></View>
-            <View onLayout={this._onEditorLayout} style={styles.svgs}>
-              {svgs}
-            </View>
-            {
-              watermark ?
-              <ImageBackground
-                style={[styles.watermarkStyle, { width: watermarkWidth }, watermarkStyle]}
-                source={watermark} /> : null
-            }
-            { this.renderGuidelines() }
-          </ViewShot>
-        </View>
-      </PinchZoomView>
+      <PortalProvider>
+        
+        <PinchZoomView
+          ref={this.pinchZoomViewRef}
+          maxScale="4"
+          style={[styles.pinchZoomStyle, containerStyle]}
+          onZoomEnd={this.onZoomEnd}
+          {...pinchZoomViewProps}>
+          <View style={styles.frameContainer}>
+            <View pointerEvents='none' style={styles.frame} />
+            <ViewShot ref={this.viewShot} options={{format: 'jpg'}}>
+              <View style={{width, height}}></View>
+              <View onLayout={this._onEditorLayout} style={styles.svgs}>
+                {svgs}
+                <PortalHost name="controlLayerPortal" />
+              </View>
+              {
+                watermark ?
+                <ImageBackground
+                  style={[styles.watermarkStyle, { width: watermarkWidth }, watermarkStyle]}
+                  source={watermark} /> : null
+              }
+              { this.renderGuidelines() }
+            </ViewShot>
+          </View>
+        </PinchZoomView>
+
+      </PortalProvider>
     )
   }
 }
