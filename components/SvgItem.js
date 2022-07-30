@@ -554,16 +554,18 @@ class SvgItem extends React.PureComponent {
     const {showSize} = this.props;
 
     return (
-      <View style={[
-        styles.boundingBox,
-        { borderColor: this.locked ? '#B7B7B7' : this.controlColor }
-      ]}>
+      <View
+        pointerEvents='box-none'
+        style={[
+          styles.boundingBox,
+          { borderColor: this.locked ? '#B7B7B7' : this.controlColor }
+        ]}>
         {
           !this.locked ? (
             <PanGestureHandler
               onGestureEvent={this.onResize}
               onHandlerStateChange={this.onResizeStateChanged}>
-              <View style={[
+              <View pointerEvents='auto' style={[
                 styles.resizeBox,
                 { borderColor: this.locked ? '#B7B7B7' : this.controlColor }
               ]} />
@@ -571,7 +573,8 @@ class SvgItem extends React.PureComponent {
           ) : null
         }
         { 
-          showSize ? <View style={[
+          !showSize ? null :
+          <View pointerEvents='none' style={[
             styles.sizeBox,
             {
               // transform: [
@@ -584,7 +587,7 @@ class SvgItem extends React.PureComponent {
             }
           ]}>
             <Text numberOfLines={1} style={styles.sizeText}>{`${width.toFixed(1)} x ${height.toFixed(1)}`}</Text>
-          </View> : null
+          </View>
         }
       </View>
     );
@@ -637,7 +640,7 @@ class SvgItem extends React.PureComponent {
             </View>
 
             <Portal hostName="controlLayerPortal">
-              <View pointerEvents='none' style={{
+              <View pointerEvents='box-none' style={{
                 position: 'absolute',
                 width, height, left, top
               }}>
