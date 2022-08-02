@@ -153,6 +153,9 @@ class SvgEditor extends React.PureComponent {
   /** filters definition */
   filters = [];
 
+  /** gradient definition */
+  gradients = [];
+
   // guidelines
   _disableGuideline = false;
   _hGuidelineTranslateY = new Animated.Value(0);
@@ -204,6 +207,9 @@ class SvgEditor extends React.PureComponent {
     for (let defEle of defElements) {
       let childElements = defEle.children;
       styleElements = styleElements.concat(childElements.filter(child => child.name === 'style'));
+
+      // set svg gradient definitions
+      this.gradients = this.gradients.concat(childElements.filter(child => child.name === 'linearGradient'));
 
       // set svg global filter
       this.filters = this.filters.concat(childElements.filter(child => child.name === 'filter'));
@@ -312,7 +318,7 @@ class SvgEditor extends React.PureComponent {
       const performAction = (t) => {
         switch (t) {
           case 'set':
-            children[targetIndex] = mergeDeep(children[targetIndex], fromJS(payload));
+            children[targetIndex] = mergeDeep(children[targetIndex], payload);
             break;
           case 'add':
             children.push(fromJS(payload));
@@ -376,6 +382,7 @@ class SvgEditor extends React.PureComponent {
           onPanEnded={this._removeGuidelines}
           offsetPositionToGuideline={this._offsetPositionToGuideline}
           getFilters={this._getFilters}
+          gradients={this.gradients}
           setElementById={this.setElementById}
 
           // locked
@@ -670,11 +677,7 @@ class SvgEditor extends React.PureComponent {
   }
 
   setElementById = (target, payload) => {
-    this.push({
-      type: 'set',
-      target,
-      payload,
-    });
+    this.push({ type: 'set', target, payload });
   };
 
   /**

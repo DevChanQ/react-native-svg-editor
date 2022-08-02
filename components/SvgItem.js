@@ -18,6 +18,8 @@ import { stringify } from "svgson";
 import { Portal } from '@gorhom/portal';
 
 import { mergeDeep, valueOrDefault } from '../utils';
+import { mergeDeep as mergeDeepImmutable } from '../utils/immutable';
+import GradientControlLayer from './SvgItemControlLayer/GradientControlLayer';
 
 const sizeBoxRect = { width: 98, height: 26 };
 
@@ -65,8 +67,15 @@ class SvgItem extends React.PureComponent {
 
   /** Default Props */
   static defaultProps = {
-    positionOffset: { x: 0, y: 0 }
- };
+    scale: 1,
+
+    positionOffset: { x: 0, y: 0 },
+
+    /** Gradients elements svgson */
+    gradients: [],
+  };
+
+  state = { attributes: {} };
 
   // private variables
   _doubleTapRef = React.createRef();
@@ -83,7 +92,8 @@ class SvgItem extends React.PureComponent {
     this._lastAttributes = this._getAttributesFromProps();
     this._initialAttributes = { ...this._lastAttributes };
     this.state = {
-      attributes: { ...this._lastAttributes }
+      gradientEditing: true,
+      attributes: { ...this._lastAttributes },
     };
   }
 
@@ -95,7 +105,7 @@ class SvgItem extends React.PureComponent {
 
   componentDidUpdate({info}) {
     const {info: newInfo, id} = this.props;
-    console.log('SvgItem.conponentDidUpdate(): ' + id);
+    console.log('SvgItem.conponentDidUpdate(): ', id);
 
     // update internal state if new props is provided
     if (!newInfo.equals(info)) {
@@ -119,11 +129,46 @@ class SvgItem extends React.PureComponent {
   }
 
   get translateEnabled() {
-    return !this.locked && this.selected;
+    return !this.locked && this.selected && !this.isEditingGradient;
   }
   
   get isFrame() {
     return this.state.attributes.id === 'frame';
+  }
+
+  get isGradientFill() {
+    // TODO: fill attributes can be a url and not a gradient (background image)
+    return !!this.state.attributes.fill?.url;
+  }
+
+  get gradientFill() {
+    return this.state.attributes['devjeff:gradient']
+  }
+
+  get gradientSvgson() {
+    const gradient = this.gradientFill;
+    if (gradient) {
+      return [gradient].map(gradient => {
+        let { type: name, otherAttrs, stops, x1, y1, x2, y2 } = gradient;
+        stops = stops.map(({ color, offset, opacity }) => ({
+          type: 'element', name: 'stop',
+          attributes: { offset, 'stop-color': color, 'stop-opacity': opacity },
+          children: []
+        }));
+  
+        return {
+          type: 'element', name,
+          attributes: { x1, y1, x2, y2, ...otherAttrs },
+          children: stops
+        }
+      });
+    }
+
+    return [];
+  }
+
+  get isEditingGradient() {
+    return this.state.gradientEditing && this.isGradientFill;
   }
 
   get attributes() {
@@ -205,8 +250,6 @@ class SvgItem extends React.PureComponent {
   }
 
   refreshValues() {
-    console.log('SvgItem.refreshValues(): ', this.props.id);
-
     this._lastAttributes = this._getAttributesFromProps();
     this.setState({attributes: { ...this._lastAttributes }});
   }
@@ -243,6 +286,8 @@ class SvgItem extends React.PureComponent {
           attributes['devjeff:skewY'] = parseFloat(values[0]);
         }
       }
+
+      delete attributes['transform'];
     }
 
     // default fill color if fill is not defined
@@ -251,7 +296,40 @@ class SvgItem extends React.PureComponent {
     attributes['stroke-width'] = parseFloat(attributes['stroke-width'] || (attributes['stroke'] ? 1 : 0));
     attributes['stroke'] = valueOrDefault(attributes['stroke'], attributes['stroke-width'] ? 'black' : '');
 
-    delete attributes['transform'];
+
+    // gradient attribute if relevent
+    if (attributes['fill']?.url && !attributes['devjeff:gradient']) {
+      const {gradients} = this.props;
+
+      let selector = attributes['fill'].url; selector = selector.slice(1);
+      const fillGradient = gradients.find(gradient => gradient.attributes.id == selector);
+      if (fillGradient) {
+        let { name: type, children: stops=[], attributes: gradient } = fillGradient;
+        let { x1, y1, x2, y2, ...otherAttrs } = gradient;
+        stops = stops.map(({ attributes: stop }) => {
+          let { offset="0" } = stop,
+            color = stop['stop-color'] || "black",
+            opacity = stop['stop-opacity'] || "1";
+          
+          if (offset.includes('%')) { // percentage value
+            offset = parseFloat(offset) / 100;
+          } else {
+            offset = parseFloat(offset);
+          }
+  
+          return { offset, color, opacity };
+        });
+
+        attributes['devjeff:gradient'] = {
+          type, stops,
+          x1: parseFloat(x1),
+          y1: parseFloat(y1),
+          x2: parseFloat(x2),
+          y2: parseFloat(y2),
+          otherAttrs
+        };
+      }
+    }
 
     return attributes;
   }
@@ -268,7 +346,7 @@ class SvgItem extends React.PureComponent {
   }
 
   /**
-   * Get info from props and parse number strings to numbers
+   * Get info from props and parse serialise attributes to js values
    */
   _getAttributesFromProps() {
     let {info} = this.props;
@@ -276,12 +354,18 @@ class SvgItem extends React.PureComponent {
     let {attributes} = info;
 
     for (let key in attributes) {
-      if (attributes[key] === "true" || attributes[key] === "false") {
+      let attr = attributes[key];
+
+      if (typeof attr === 'string' && attr.includes("url(")) {
+        // url value
+        let url = attr.split('(')[1].slice(0, -1);
+        attributes[key] = { url };
+      } else if (attr === "true" || attr === "false") {
         // boolean value
-        attributes[key] = attributes[key] === "true";
+        attributes[key] = attr === "true";
       } else {
         // number value
-        let num = Number(attributes[key]);
+        let num = Number(attr);
         if (!Number.isNaN(num)) {
           attributes[key] = num;
         }
@@ -304,10 +388,10 @@ class SvgItem extends React.PureComponent {
     this.onValueRefreshed(changed);
   }
 
-  setElement(ele) {
+  setElement(svgson) {
     const {setElementById, id} = this.props;
     if (setElementById) {
-      setElementById(id, ele);
+      setElementById(id, svgson);
     } else {
       console.warn('No setElementById in props');
     }
@@ -315,10 +399,10 @@ class SvgItem extends React.PureComponent {
 
   /**
    * Set attribute globally (in editor)
-   * Difference between setAttributes & updateAttributes is that _lastAttrributes is updated
+   * Difference between setAttributes & updateAttributes is that _lastAttrributes is updated and history is pushed
    * @param {object} obj attribute object
    */
-  setAttributes(attributes, history=true) {
+  setAttributes = (attributes, history=true) => {
     if (history) {
       this.setElement({attributes});
     } else {
@@ -331,7 +415,7 @@ class SvgItem extends React.PureComponent {
    * Update attribute localy
    * @param {object} obj Attribute object
    */
-  updateAttributes(obj) {
+  updateAttributes = (obj) => {
     let attributes = {...this.state.attributes};
     attributes = mergeDeep(attributes, obj);
     this.setState({attributes});
@@ -467,12 +551,18 @@ class SvgItem extends React.PureComponent {
   }
 
   /**
-   * Function for transforming attributes, override to customize. Called before _generateXml
+   * Transform attributes for displaying/rendering, override to customize. Called by `_generateXml`
    * Some attrbiutes of elements such as `<rect>` needs to be transformed under certain situations,
    * for example `<rect>` with `stroke-width`
-   * @param {obj} attributes
+   * @param {object} attributes
+   * @returns {object} transformed attributes
    */
-  transform(attributes) {
+  transform(a) {
+    let attributes = { ...a };
+    if (attributes['fill']?.url) {
+      attributes['fill'] = `url(${attributes['fill'].url})`;
+    }
+    
     return attributes;
   }
 
@@ -514,12 +604,12 @@ class SvgItem extends React.PureComponent {
         value: '',
         attributes: {viewBox: this.getParentViewBox(), preserveAspectRatio: "none" },
         children: [
-          // {
-          //   name: 'defs',
-          //   type: 'element',
-          //   value: '',
-          //   children: this.filters,
-          // }, 
+          {
+            name: 'defs',
+            type: 'element',
+            value: '',
+            children: this.gradientSvgson,
+          }, 
           {
             ...this.props.info.toJS(),
             attributes: this.transform(attributes),
@@ -527,7 +617,7 @@ class SvgItem extends React.PureComponent {
         ]
       });
 
-      console.log(this._cachedXML)
+      // console.log(this._cachedXML)
     }
 
     return this._cachedXML;
@@ -552,6 +642,16 @@ class SvgItem extends React.PureComponent {
   renderControlLayer() {
     const {width, height} = this.getSize(), scale = this.getScale();
     const {showSize} = this.props;
+
+    if (this.isEditingGradient) {
+      return (
+        <GradientControlLayer
+          scale={scale}
+          gradient={this.gradientFill}
+          updateAttributes={this.updateAttributes}
+          setAttributes={this.setAttributes} />
+      )
+    }
 
     return (
       <View
@@ -955,10 +1055,10 @@ class SvgTextItem extends SvgItem {
       let height = heights.reduce((p, v) => ( p > v ? p : v ), 0), width = widths.reduce((p, v) => p + v, 0);
       let size = {width: width || 100, height: height || 100};
 
-      this.setAttributes({width: Math.round(size.width+2), height: Math.round(size.height)}, false);
-
       this.baselineOffset = lines[0]?.ascender || 0;
       this.valueRefreshed = false;
+
+      this.setAttributes({width: Math.round(size.width+2), height: Math.round(size.height)}, false);
     }
   }
 

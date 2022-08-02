@@ -1,13 +1,12 @@
 import React, { useRef, useCallback } from 'react';
 import { View, StyleSheet } from 'react-native';
 
-import ReactSvg, { Line } from 'react-native-svg';
 import getBBox from 'svg-path-bbox';
-import { PanGestureHandler, State, TapGestureHandler } from 'react-native-gesture-handler';
 
+import { valueOrDefault } from '../utils';
 import { Svg, CurveTo, SvgItem as PathItem } from './svg';
 import SvgItem from './SvgItem';
-import { valueOrDefault } from '../utils';
+import PathEditLayer from './SvgItemControlLayer/PathEditLayer';
 
 const PathState = {
   START: 'S',
@@ -48,152 +47,6 @@ const styles = StyleSheet.create({
 
   }
 })
-
-const MemorizedPoint = ({scale, point, onPan: givenOnPan, onPanEnd, children}) => {
-  const _lastPoint = useRef(point);
-
-  
-
-  let onPanStateChanged = useCallback(({nativeEvent: {oldState}}) => {
-    if (oldState === State.ACTIVE) {
-      _lastPoint.current = point;
-
-      if (onPanEnd) onPanEnd();
-    }
-  }, [point])
-
-  let onPan = useCallback(({nativeEvent: {translationX, translationY}}) => {
-    let point = {x: _lastPoint.current.x + translationX/scale, y: _lastPoint.current.y + translationY/scale}
-    givenOnPan(point)
-  }, [givenOnPan])
-
-  return (
-    <PanGestureHandler onGestureEvent={onPan} onHandlerStateChange={onPanStateChanged}>
-      { children }
-    </PanGestureHandler>
-  )
-}
-
-const TargetPoint = ({scale, point, onPan, onPanEnd, onPointTap}) => {
-  return (
-    <MemorizedPoint scale={scale} point={point} onPan={onPan} onPanEnd={onPanEnd}>
-      <TapGestureHandler onHandlerStateChange={e => onPointTap(e, point)}>
-        <View style={[styles.targetPoint, {top: point.y, left: point.x, transform: [{scale: 1/scale}]}]} />
-      </TapGestureHandler>
-    </MemorizedPoint>
-  );
-}
-
-const ControlPoint = ({scale, point, onPan, onPanEnd, onPointTap, debug}) => {
-  if (debug) {
-    console.log('ControlPoint.point: ', point);
-  }
-
-  return (
-    <MemorizedPoint scale={scale} point={point} onPan={onPan} onPanEnd={onPanEnd}>
-      <TapGestureHandler onHandlerStateChange={e => onPointTap(e, point)}>
-        <View style={[styles.controlPoint, debug ? {borderColor: 'red'} : {}, {top: point.y, left: point.x, transform: [{scale: 1/scale}]}]} />
-      </TapGestureHandler>
-    </MemorizedPoint>
-  );
-}
-
-class EditLayer extends React.PureComponent {
-
-  componentDidUpdate() {
-    this._controlPoints = null;
-    this._targetPoints = null;
-  }
-
-  get controlPoints() {
-    if (!this._controlPoints) {
-      this._controlPoints = this.props.parsedPath.controlLocations().filter(point => point.movable);
-    }
-    return this._controlPoints;
-  }
-
-  get targetPoints() {
-    if (!this._targetPoints) {
-      this._targetPoints = this.props.parsedPath.targetLocations().filter(point => point.movable);
-    }
-    return this._targetPoints;
-  }
-
-  get lineStyle() {
-    return this.props.lineStyle || {};
-  }
-
-  render() {
-    console.log('EditLayer.render')
-
-    let { 
-      lineStyle,
-      viewBox,
-      targetPointUpdated,
-      parsedPath,
-
-      ...pointProps
-    } = this.props;
-
-    let controlPointLines = this.controlPoints.map(point => {
-      const offset = 0;//(16 * (1/this.props.scale)) / 2;
-      return point.relations ? point.relations.map(rel => {
-        return (
-          <Line
-            x1={point.x + offset}
-            y1={point.y + offset}
-            x2={rel.x + offset}
-            y2={rel.y + offset}
-            stroke="#7c7c80"
-            strokeWidth={1/this.props.scale} />
-        )
-      }) : [];
-    }).flat();
-
-    targetPoints = this.targetPoints.map((point) => {
-      const onPan = event => {
-        if (targetPointUpdated) targetPointUpdated(point, event)
-      }
-  
-      return (
-        <TargetPoint
-          {...pointProps}
-          point={point}
-          onPan={onPan} />
-          // key={`target_${point.x},${point.y}`} 
-      )
-    });
-
-    controlPoints = this.controlPoints.map((point, index) => {
-      const onPan = event => {
-        if (targetPointUpdated) targetPointUpdated(point, event)
-      }
-
-      return (
-        <ControlPoint
-          {...pointProps}
-          point={{x: point.x, y: point.y}}
-          onPan={onPan} />
-          // key={`control_${point.x},${point.y}`}
-      )
-    });
-
-    const {startPoint={x: 0, y: 0}} = pointProps;
-
-    return (
-      <View style={styles.absolute}>
-        <ReactSvg style={[{position: 'absolute'}, this.lineStyle]} viewBox={viewBox}>
-          { controlPointLines }
-        </ReactSvg>
-        <View style={{transform: [{translateX: -startPoint.x}, {translateY: -startPoint.y}]}}>
-          { targetPoints }
-          { controlPoints }
-        </View>
-      </View>
-    );
-  }
-
-}
 
 class SvgPathItem extends SvgItem {
   MODE = PathState.START;
@@ -259,7 +112,7 @@ class SvgPathItem extends SvgItem {
     return info;
   }
 
-  targetPointUpdated = (point, {x, y}) => {
+  updateTargetPoint = (point, {x, y}) => {
     this.parsedPath.setLocation(point, {x, y});
     this.updatePath(true);
   };
@@ -407,12 +260,12 @@ class SvgPathItem extends SvgItem {
     let svgScale = 1/this._internalScale, translateX = -((width - ogWidth)/2), translateY = -((height - ogHeight)/2);
 
     return (
-      <EditLayer
+      <PathEditLayer
         scale={Math.max(scale, 0.1)}
-        onPointTap={this.onTap}
-        onPanEnd={this.onEditEnd}
         viewBox={this.getParentViewBox()}
-        targetPointUpdated={this.targetPointUpdated}
+        updateTargetPoint={this.updateTargetPoint}
+        onTap={this.onTap}
+        onPanEnd={this.onEditEnd}
         lineStyle={{width, height, left: translateX, top: translateY, transform: [{scale: svgScale}]}}
         startPoint={this.startPoint}
         parsedPath={this.parsedPath} />
