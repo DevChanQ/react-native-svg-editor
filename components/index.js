@@ -124,8 +124,8 @@ class SvgEditor extends React.PureComponent {
   state = {
     /** Current scale vector of the PinchZoomView */
     scale: 1,
-    /** ID of selected element */
     // TODO: Support multiple selected
+    /** ID of selected element */
     selected: null,
     historyPointer: -1,
     canvasSize: {
@@ -180,6 +180,16 @@ class SvgEditor extends React.PureComponent {
 
   get hasChanges() {
     return this.history.length > 0;
+  }
+
+  /** Return the tag name of the selected element */
+  get selectedNodeType() {
+    const { selected } = this.state;
+    if (selected) {
+      let children = this.baseChildren.toJS(), node = children.find(child => child.id === selected);
+      return node['name'];
+    }
+    return null;
   }
 
   get canvasSize() {
