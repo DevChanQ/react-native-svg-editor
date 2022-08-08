@@ -182,6 +182,10 @@ class SvgEditor extends React.PureComponent {
     return this.history.length > 0;
   }
 
+  get selectedNodeId() {
+    return this.state.selected;
+  }
+
   /** Return the tag name of the selected element */
   get selectedNodeType() {
     const { selected } = this.state;
@@ -564,7 +568,11 @@ class SvgEditor extends React.PureComponent {
       if (this.itemRefs[childId]?.current && !EXCLUDE_ELEMENTS.includes(childName)) {
         try {
           let svgson = await Promise.resolve(this.itemRefs[childId].current.toSvgson(external));
-          gradients = gradients.concat(this.itemRefs[childId].current.gradientSvgson);
+          if (external) {
+            gradients = gradients.concat(this.itemRefs[childId].current.internalGradientSvgson);
+          } else {
+            gradients = gradients.concat(this.itemRefs[childId].current.gradientSvgson);
+          }
           svgsons.push(svgson);
         } catch (e) {
           console.error(e);
