@@ -6,8 +6,14 @@ import MemorisedPan from './MemorisedPan';
 const styles = StyleSheet.create({
   controlPointContainer: {
     position: 'absolute',
-    marginLeft: -10,
-    marginTop: -10,
+    marginLeft: -19,
+    marginTop: -19,
+  },
+  controlPointHitbox: {
+    width: 38,
+    height: 38,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   controlPoint: {
     width: 20,
@@ -54,7 +60,9 @@ const GradientControlLayer = ({ setAttributes, updateAttributes, gradient, scale
             let x1 = last.x + translationX/scale, y1 = last.y + translationY/scale;
             updateAttributes({ 'devjeff:gradient': {x1, y1} })
           }}>
-          <View style={styles.controlPoint}><Text style={styles.controlPointText}>1</Text></View>
+          <View style={styles.controlPointHitbox}>
+            <View style={styles.controlPoint}><Text style={styles.controlPointText}>1</Text></View>
+          </View>
         </MemorisedPan>
       </View>
 
@@ -76,7 +84,9 @@ const GradientControlLayer = ({ setAttributes, updateAttributes, gradient, scale
             let x2 = last.x + translationX/scale, y2 = last.y + translationY/scale;
             updateAttributes({ 'devjeff:gradient': {x2, y2}})
           }}>
-          <View style={styles.controlPoint}><Text style={styles.controlPointText}>2</Text></View>
+          <View style={styles.controlPointHitbox}>
+            <View style={styles.controlPoint}><Text style={styles.controlPointText}>2</Text></View>
+          </View>
         </MemorisedPan>
       </View>
     </View>
