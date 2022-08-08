@@ -213,11 +213,14 @@ class SvgPathItem extends SvgItem {
     return rect;
   }
 
-  getParentViewBox() {
-    const {attributes} = this.state;
-    let viewBox = `${attributes.left} ${attributes.top} ${attributes.width} ${attributes.height}`;
-    
-    return viewBox;
+  getPosition() {
+    const {attributes: {width, height}} = this.state;
+    return {width, height};
+  }
+
+  getPosition() {
+    const {attributes: {left, top}} = this.state;
+    return {x: left, y: top};
   }
 
   getControlLineViewBox() {

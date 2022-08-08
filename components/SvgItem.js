@@ -117,18 +117,16 @@ class SvgItem extends React.PureComponent {
     if (!newInfo.equals(info)) {
       console.log(`SvgItem (${id}): props different, proceed to update internal state`);
 
-      // compare new and old attributes
       const newAttributes = newInfo.get('attributes'), oldAttributes = info.get('attributes');
       this._attrDiff = newAttributes.filter((v, k) => oldAttributes.get(k) !== v);
-      this._stateRefreshed = true;
 
+      this._stateRefreshed = true;
       this.refreshValues();
     } else if (this._stateRefreshed) {
       console.log(`SvgItem (${id}): state refreshed and updated, call _onRefresh`);
 
       this._onRefresh(this._attrDiff);
       this._stateRefreshed = false;
-      this._attrDiff = null;
     }
   }
 
@@ -163,6 +161,33 @@ class SvgItem extends React.PureComponent {
     if (gradient) {
       return [gradient].map(gradient => {
         let { type: name, otherAttrs, stops, x1, y1, x2, y2 } = gradient;
+        stops = stops.map(({ color, offset, opacity }) => ({
+          type: 'element', name: 'stop',
+          attributes: { offset, 'stop-color': color, 'stop-opacity': opacity },
+          children: []
+        }));
+        
+        let g = {
+          type: 'element', name,
+          attributes: { x1, y1, x2, y2, ...otherAttrs },
+          children: stops
+        };
+        
+        return g;
+      });
+    }
+
+    return [];
+  }
+
+  /** Getter for svgson of gradient, used by internal gradient display */
+  get internalGradientSvgson() {
+    const gradient = this.gradientFill;
+    if (gradient) {
+      const {x, y} = this.getPosition();
+      return [gradient].map(gradient => {
+        let { type: name, otherAttrs, stops, x1, y1, x2, y2 } = gradient;
+        x1 += x;x2 += x;y1 += y;y2 += y;
         stops = stops.map(({ color, offset, opacity }) => ({
           type: 'element', name: 'stop',
           attributes: { offset, 'stop-color': color, 'stop-opacity': opacity },
@@ -403,8 +428,6 @@ class SvgItem extends React.PureComponent {
     const {width, height} = this.getSize();
     this.aspectRatio = width / height;
 
-    console.log('_onRefresh.aspectRatio: ', width / height);
-
     // call onValueRefreshed callback
     this.onValueRefreshed(changed);
   }
@@ -610,8 +633,8 @@ class SvgItem extends React.PureComponent {
   }
 
   getParentViewBox() {
-    const {width, height} = this.getSize();
-    return `0 0 ${width} ${height}`;
+    const {width, height} = this.getSize(), {x, y} = this.getPosition();
+    return `${x} ${y} ${width} ${height}`;
   }
 
   /**
@@ -643,7 +666,7 @@ class SvgItem extends React.PureComponent {
             name: 'defs',
             type: 'element',
             value: '',
-            children: this.gradientSvgson,
+            children: this.internalGradientSvgson,
           },
           {
             ...this.props.info.toJS(),
@@ -862,13 +885,6 @@ class SvgRectItem extends SvgItem {
     return attributes;
   }
 
-  getParentViewBox() {
-    let {x=0, y=0} = this.state.attributes;
-    let {width, height} = this.getSize();
-
-    return `${x} ${y} ${width} ${height}`;
-  }
-
   // renderContent() {
   //   let {rx} = this.state.attributes;
   //   if (!rx) {
@@ -918,7 +934,7 @@ class SvgEllipseItem extends SvgItem {
   }
 
   transform(a) {
-    let attributes = {...a};
+    let attributes = super.transform(a);
 
     if (attributes['stroke-width']) {
       let strokeWidth = attributes['stroke-width'];
@@ -959,11 +975,9 @@ class SvgEllipseItem extends SvgItem {
     return {width: rx*2, height: ry*2};
   }
 
-  getParentViewBox() {
-    const {cx, cy, rx, ry} = this.state.attributes;
-    const {width, height} = this.getSize();
-
-    return `${cx - rx} ${cy - ry} ${width} ${height}`
+  getPosition() {
+    const {attributes: {cx, cy, rx, ry}} = this.state;
+    return {x: cx - rx, y: cy - ry};
   }
 }
 
@@ -981,7 +995,7 @@ class SvgCircleItem extends SvgItem {
   }
 
   transform(a) {
-    let attributes = {...a};
+    let attributes = super.transform(a);
 
     if (attributes['stroke-width']) {
       let strokeWidth = attributes['stroke-width'];
@@ -997,11 +1011,9 @@ class SvgCircleItem extends SvgItem {
     return {width: r*2, height: r*2};
   }
 
-  getParentViewBox() {
-    const {cx, cy, r} = this.state.attributes;
-    const {width, height} = this.getSize();
-
-    return `${cx - r} ${cy - r} ${width} ${height}`
+  getPosition() {
+    const {attributes: {cx, cy, r}} = this.state;
+    return {x: cx - r, y: cy - r};
   }
 }
 
@@ -1215,7 +1227,7 @@ class SvgImageItem extends SvgItem {
   }
 
   onValueRefreshed = () => {
-    this.setState({imageError: false});
+    if (this.state.imageError) this.setState({imageError: false});
   };
 
   renderContent() {
