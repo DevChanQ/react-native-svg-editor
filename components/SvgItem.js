@@ -32,10 +32,10 @@ const styles = StyleSheet.create({
   },
   resizeBoxHitbox: {
     position: 'absolute',
-    width: 22,
-    height: 22,
-    right: -22,
-    bottom: -22,
+    width: 26,
+    height: 26,
+    right: -26,
+    bottom: -26,
   },
   resizeBox: {
     width: 12,
