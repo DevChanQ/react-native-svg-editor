@@ -4,7 +4,19 @@ import { TouchableOpacity } from 'react-native-gesture-handler';
 
 import defaultStyles from './styles'
 
-export const SettingsItem = ({ item: { title }, onPress=() => {}, first, last, style, labelStyle }) => {
+export const SettingsItem = ({ item: { title, component: CustomComponent }, onPress=() => {}, first, last, style, labelStyle }) => {
+  if (CustomComponent) {
+    return (
+      <View style={[
+        first ? defaultStyles.tableCellFirst : {},
+        last ? defaultStyles.tableCellLast : {},
+        { overflow: 'hidden' }
+      ]}>
+        <CustomComponent />
+      </View>
+    );
+  }
+
   const CELL = (
     <View style={[
       defaultStyles.tableCell,
