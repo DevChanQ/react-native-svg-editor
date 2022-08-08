@@ -6,6 +6,7 @@ const SvgEditorNativeModule = NativeModules.SvgEditor;
 
 export default SvgEditor;
 export * from './components/SvgItem';
+export {default as MemorisedPan} from './components/SvgItemControlLayer/MemorisedPan';
 
 const folderSafeCheck = async path => {
   let folderExists = await RNFS.exists(path);
