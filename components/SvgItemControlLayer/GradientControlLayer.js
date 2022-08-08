@@ -27,7 +27,7 @@ const styles = StyleSheet.create({
 });
 
 const GradientControlLayer = ({ setAttributes, updateAttributes, gradient, scale=1 }) => {
-  if (!gradient) return;
+  if (!gradient) return <View />;
 
   const position1 = { x: gradient.x1, y: gradient.y1 }, position2 = { x: gradient.x2, y: gradient.y2 };
 
