@@ -186,8 +186,7 @@ class SvgEditor extends React.PureComponent {
   get selectedNodeType() {
     const { selected } = this.state;
     if (selected) {
-      let children = this.baseChildren.toJS(), node = children.find(child => child.id === selected);
-      return node['name'];
+      return this.itemRefs[selected]?.current?.type;
     }
     return null;
   }
@@ -559,18 +558,29 @@ class SvgEditor extends React.PureComponent {
 
     // get children svgson
     const EXCLUDE_ELEMENTS = ['title', 'defs', 'style', 'metadata', 'desc']
-    let svgsons = [];
+    let svgsons = [], gradients = [];
     for (let child of children) {
       let childId = child.get('id'), childName = child.get('name');
       if (this.itemRefs[childId]?.current && !EXCLUDE_ELEMENTS.includes(childName)) {
         try {
           let svgson = await Promise.resolve(this.itemRefs[childId].current.toSvgson(external));
+          gradients = gradients.concat(this.itemRefs[childId].current.gradientSvgson);
           svgsons.push(svgson);
         } catch (e) {
           console.error(e);
         }
       }
     }
+
+    let defs = {
+      name: 'defs',
+      type: 'element',
+      value: '',
+      children: gradients,
+    };
+
+    // insert defs to front
+    svgsons.splice(0, 0, defs);
 
     let svg = stringify({
       name: 'svg',
