@@ -18,7 +18,6 @@ import { stringify } from "svgson";
 import { Portal } from '@gorhom/portal';
 
 import { mergeDeep, valueOrDefault } from '../utils';
-import { mergeDeep as mergeDeepImmutable } from '../utils/immutable';
 import GradientControlLayer from './SvgItemControlLayer/GradientControlLayer';
 
 const sizeBoxRect = { width: 98, height: 26 };
@@ -31,13 +30,17 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
   },
-  resizeBox: {
+  resizeBoxHitbox: {
     position: 'absolute',
+    width: 22,
+    height: 22,
+    right: -22,
+    bottom: -22,
+  },
+  resizeBox: {
     width: 12,
     height: 12,
     borderWidth: 1,
-    right: -12,
-    bottom: -12,
     backgroundColor: 'white',
   },
   boundingBox: {
@@ -84,6 +87,9 @@ class SvgItem extends React.PureComponent {
   _cachedXML = null;
   _internalScale = 1;
 
+  _stateRefreshed = false;
+  _attrDiff = null;
+
   controlColor = '#19A0FB';
 
   constructor(props) {
@@ -92,7 +98,7 @@ class SvgItem extends React.PureComponent {
     this._lastAttributes = this._getAttributesFromProps();
     this._initialAttributes = { ...this._lastAttributes };
     this.state = {
-      gradientEditing: true,
+      gradientEditing: false,
       attributes: { ...this._lastAttributes },
     };
   }
@@ -109,14 +115,20 @@ class SvgItem extends React.PureComponent {
 
     // update internal state if new props is provided
     if (!newInfo.equals(info)) {
-      console.log(`SvgItem: (${id}) props different, should update internal state...`)
+      console.log(`SvgItem (${id}): props different, proceed to update internal state`);
 
       // compare new and old attributes
       const newAttributes = newInfo.get('attributes'), oldAttributes = info.get('attributes');
-      const diff = newAttributes.filter((v, k) => oldAttributes.get(k) !== v);
+      this._attrDiff = newAttributes.filter((v, k) => oldAttributes.get(k) !== v);
+      this._stateRefreshed = true;
 
       this.refreshValues();
-      this._onRefresh(diff);
+    } else if (this._stateRefreshed) {
+      console.log(`SvgItem (${id}): state refreshed and updated, call _onRefresh`);
+
+      this._onRefresh(this._attrDiff);
+      this._stateRefreshed = false;
+      this._attrDiff = null;
     }
   }
 
@@ -142,9 +154,10 @@ class SvgItem extends React.PureComponent {
   }
 
   get gradientFill() {
-    return this.state.attributes['devjeff:gradient']
+    return this.state.attributes['devjeff:gradient'];
   }
 
+  /** Getter for svgson of gradient */
   get gradientSvgson() {
     const gradient = this.gradientFill;
     if (gradient) {
@@ -228,6 +241,13 @@ class SvgItem extends React.PureComponent {
     let info = this.props.info.toJS();
     let attributes = {...this.state.attributes};
 
+    // deserialising attributes for export
+    for (let key in attributes) {
+      if (attributes[key].url) { attributes[key] = `url(${attributes[key].url})` }
+      
+      if (typeof attributes[key] === 'object') { delete attributes[key] }
+    }
+
     // TODO: external transform
     if (external) {
       let rotate = parseFloat(attributes['devjeff:rotate'] || 0);
@@ -306,6 +326,11 @@ class SvgItem extends React.PureComponent {
       if (fillGradient) {
         let { name: type, children: stops=[], attributes: gradient } = fillGradient;
         let { x1, y1, x2, y2, ...otherAttrs } = gradient;
+
+        // Linear Gradient Implementation as per:
+        // https://www.w3.org/TR/SVG11/pservers.html#LinearGradientElementX1Attribute
+        x1 = parseFloat(x1), y1 = parseFloat(y1), x2 = parseFloat(x2), y2 = parseFloat(y2);
+
         stops = stops.map(({ attributes: stop }) => {
           let { offset="0" } = stop,
             color = stop['stop-color'] || "black",
@@ -320,14 +345,7 @@ class SvgItem extends React.PureComponent {
           return { offset, color, opacity };
         });
 
-        attributes['devjeff:gradient'] = {
-          type, stops,
-          x1: parseFloat(x1),
-          y1: parseFloat(y1),
-          x2: parseFloat(x2),
-          y2: parseFloat(y2),
-          otherAttrs
-        };
+        attributes['devjeff:gradient'] = { type, stops, x1, y1, x2, y2, otherAttrs };
       }
     }
 
@@ -377,12 +395,15 @@ class SvgItem extends React.PureComponent {
 
   /**
    * Called Internally after the given attributes is updated/refreshed 
+   * Internal state are updated before this function call
    * @param {object} changed Attributes that was updated
    */
   _onRefresh = (changed={}) => {
     // update aspect ratio
     const {width, height} = this.getSize();
     this.aspectRatio = width / height;
+
+    console.log('_onRefresh.aspectRatio: ', width / height);
 
     // call onValueRefreshed callback
     this.onValueRefreshed(changed);
@@ -571,7 +592,7 @@ class SvgItem extends React.PureComponent {
   }
 
   /**
-   * Returns size of element
+   * Returns size of element (from internal state)
    * @returns {object} Size object containing width and height
    */
   getSize() {
@@ -593,6 +614,20 @@ class SvgItem extends React.PureComponent {
     return `0 0 ${width} ${height}`;
   }
 
+  /**
+   * Set Width & Height of element
+   * @param {number} size.width new width
+   * @param {number} size.height new height
+   */
+  setSize({ width, height }, update=false) {
+    width = parseFloat(width), height = parseFloat(height);
+    if (update) {
+      this.updateAttributes({ width, height });
+    } else {
+      this.setAttributes({ width, height });
+    }
+  }
+
   _generateXML() {
     let {attributes: propsAttributes} = this.props.info.toObject();
     let {attributes} = this.state;
@@ -609,7 +644,7 @@ class SvgItem extends React.PureComponent {
             type: 'element',
             value: '',
             children: this.gradientSvgson,
-          }, 
+          },
           {
             ...this.props.info.toJS(),
             attributes: this.transform(attributes),
@@ -621,6 +656,10 @@ class SvgItem extends React.PureComponent {
     }
 
     return this._cachedXML;
+  }
+
+  setGradientEditing(flag) {
+    this.setState({ gradientEditing: !!flag });
   }
 
   renderContent() {
@@ -665,10 +704,9 @@ class SvgItem extends React.PureComponent {
             <PanGestureHandler
               onGestureEvent={this.onResize}
               onHandlerStateChange={this.onResizeStateChanged}>
-              <View pointerEvents='auto' style={[
-                styles.resizeBox,
-                { borderColor: this.locked ? '#B7B7B7' : this.controlColor }
-              ]} />
+              <View pointerEvents='auto' style={styles.resizeBoxHitbox}>
+                <View style={[styles.resizeBox, { borderColor: this.locked ? '#B7B7B7' : this.controlColor }]} />
+              </View>
             </PanGestureHandler>
           ) : null
         }
@@ -801,14 +839,16 @@ class SvgRectItem extends SvgItem {
   _initAttributes(a) {
     let attributes = super._initAttributes(a);
 
-    attributes['appX'] = valueOrDefault(attributes['appX'], attributes['x'] || 0);
-    attributes['appY'] = valueOrDefault(attributes['appY'], attributes['y'] || 0);
+    attributes['x'] = valueOrDefault(attributes['x'], 0);
+    attributes['y'] = valueOrDefault(attributes['y'], 0);
+    attributes['appX'] = valueOrDefault(attributes['appX'], attributes['x']);
+    attributes['appY'] = valueOrDefault(attributes['appY'], attributes['y']);
 
     return attributes;
   }
   
   transform(a) {
-    let attributes = {...a};
+    let attributes = super.transform(a);
 
     if (attributes['stroke-width']) {
       let strokeWidth = attributes['stroke-width'];
@@ -829,41 +869,37 @@ class SvgRectItem extends SvgItem {
     return `${x} ${y} ${width} ${height}`;
   }
 
-  renderContent() {
-    let {rx} = this.state.attributes;
-    if (!rx) {
-      let {fill: backgroundColor} = this.state.attributes;
-      let borderColor = this.state.attributes['stroke'] || '#000000';
-      let borderWidth = this.state.attributes['stroke-width'] || 0;
+  // renderContent() {
+  //   let {rx} = this.state.attributes;
+  //   if (!rx) {
+  //     let {fill: backgroundColor} = this.state.attributes;
+  //     let borderColor = this.state.attributes['stroke'] || '#000000';
+  //     let borderWidth = this.state.attributes['stroke-width'] || 0;
 
-      return (
-        <View style={{
-          width: '100%',
-          height: '100%',
-          backgroundColor,
-          borderWidth,
-          borderColor,
-        }} />
-      )
-    } 
+  //     return (
+  //       <View style={{
+  //         width: '100%',
+  //         height: '100%',
+  //         backgroundColor,
+  //         borderWidth,
+  //         borderColor,
+  //       }} />
+  //     )
+  //   } 
 
-    return super.renderContent();
-  }
+  //   return super.renderContent();
+  // }
 }
 
 class SvgEllipseItem extends SvgItem {
   _initAttributes(a) {
     let attributes = super._initAttributes(a);
 
-    if (attributes['appX'] === undefined) {
-      let rx = attributes['rx'] || 0, cx = attributes['cx'] || 0;
-      attributes['appX'] = cx - rx;
-    }
+    let rx = valueOrDefault(attributes['rx'], 0), ry = valueOrDefault(attributes['ry'], 0);
+    let cx = valueOrDefault(attributes['cx'], 0), cy = valueOrDefault(attributes['cy'], 0);
 
-    if (attributes['appY'] === undefined) {
-      let ry = attributes['ry'] || 0, cy = attributes['cy'] || 0;
-      attributes['appY'] = cy - ry;
-    }
+    attributes['appX'] = valueOrDefault(attributes['appX'], cx - rx);
+    attributes['appY'] = valueOrDefault(attributes['appY'], cy - ry);
 
     return attributes;
   }
@@ -905,6 +941,17 @@ class SvgEllipseItem extends SvgItem {
     }
 
     this.updateAttributes({ rx, ry });
+  }
+  
+  setSize({ width, height }, update=false) {
+    width = parseFloat(width), height = parseFloat(height);
+    let rx = width / 2, ry = height / 2;
+
+    if (update) {
+      this.updateAttributes({rx, ry});
+    } else {
+      this.setAttributes({rx, ry});
+    }
   }
 
   getSize() {

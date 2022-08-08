@@ -87,8 +87,8 @@ class SvgPathItem extends SvgItem {
     let strokeWidth = valueOrDefault(attributes['stroke-width'], 0);
     const rect = this.getBoundingBox(d, strokeWidth);
 
-    attributes['appX'] = attributes['appX'] === undefined ? rect.left : attributes['appX'];
-    attributes['appY'] = attributes['appY'] === undefined ? rect.top : attributes['appY'];
+    attributes['appX'] = valueOrDefault(attributes['appX'], rect.left);
+    attributes['appY'] = valueOrDefault(attributes['appY'], rect.top);
 
     return { ...rect, ...attributes };
   }
@@ -167,18 +167,23 @@ class SvgPathItem extends SvgItem {
     });
   }
 
-  updatePathPermanent() {
-    this.updatePath();
+  setPath(updateLocation=false) {
+    const newPath = this.parsedPath.asString();
+    const rect = this.getBoundingBox(newPath, this.strokeWidth);
 
-    // next tick
-    setTimeout(() => {
-      const {updateAttributesPermanent} = this.props;
-      if (updateAttributesPermanent) {
-        let attributes = {...this.state.attributes};
-        console.log('updatePathPermanent: ', attributes)
-        updateAttributesPermanent(attributes);
-      }
-    }, 0);
+    let { left, top } = rect;
+    let { left: oldLeft, top: oldTop, appX, appY } = this._lastAttributes;
+
+    if (updateLocation) {
+      appX += left - oldLeft;
+      appY += top - oldTop;
+    }
+
+    this.setAttributes({
+      d: newPath,
+      ...rect,
+      appX, appY,
+    });
   }
 
   /**
@@ -208,23 +213,6 @@ class SvgPathItem extends SvgItem {
     return rect;
   }
 
-  scale({ translationX, translationY }) {
-    let {width, height} = this._lastAttributes;
-    let newWidth = width + translationX / this.getScale(), newHeight = height + translationY / this.getScale();
-
-    if (this.aspectLocked) {
-      if (this.aspectRatio > 1) newHeight = newWidth / this.aspectRatio;
-      else newWidth = newHeight * this.aspectRatio;
-    }
-
-    let kx  = newWidth / width, ky = newHeight / height;
-    
-    this.parsedPath.scale(kx/this._lastKX, ky/this._lastKY);
-    this._lastKX = kx, this._lastKY = ky;
-
-    this.updatePath();
-  }
-
   getParentViewBox() {
     const {attributes} = this.state;
     let viewBox = `${attributes.left} ${attributes.top} ${attributes.width} ${attributes.height}`;
@@ -237,6 +225,33 @@ class SvgPathItem extends SvgItem {
     let viewBox = `${attributes.left * 2} ${attributes.top * 2} ${attributes.width * 2} ${attributes.height * 2}`;
     
     return viewBox;
+  }
+
+  setSize({ width: newWidth, height: newHeight }, update=false) {
+    let {width, height} = this._lastAttributes;
+    
+    let kx  = newWidth / width, ky = newHeight / height;
+    
+    this.parsedPath.scale(kx/this._lastKX, ky/this._lastKY);
+    this._lastKX = kx, this._lastKY = ky;
+
+    if (update) {
+      this.updatePath();
+    } else {
+      this.setPath();
+    }
+  }
+
+  scale({ translationX, translationY }) {
+    let {width, height} = this._lastAttributes;
+    let newWidth = width + translationX / this.getScale(), newHeight = height + translationY / this.getScale();
+
+    if (this.aspectLocked) {
+      if (this.aspectRatio > 1) newHeight = newWidth / this.aspectRatio;
+      else newWidth = newHeight * this.aspectRatio;
+    }
+
+    this.setSize({ width: newWidth, height: newHeight }, true);
   }
 
   renderControlLayer() {
