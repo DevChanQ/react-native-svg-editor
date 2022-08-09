@@ -599,8 +599,7 @@ class SvgItem extends React.PureComponent {
    * @param {number} obj.translationY Number to translate by in the y axis
    */
   translate({translationX, translationY}) {
-    let {appX, appY} = this._lastAttributes;
-    let {width, height} = this.getSize();
+    let {appX, appY} = this._lastAttributes, {width, height} = this.getSize();
 
     appX += translationX / this.getScale();
     appY += translationY / this.getScale();
@@ -692,7 +691,8 @@ class SvgItem extends React.PureComponent {
    * @returns {object} Size object containing width and height
    */
   getSize() {
-    const {width, height} = this._getSize(), strokeWidth = this.state.attributes['stroke-width'];
+    const {width, height} = this._getSize();
+    const stroke = this.state.attributes['stroke'], strokeWidth = stroke ? this.state.attributes['stroke-width'] : 0;
     return {width: width+strokeWidth, height: height+strokeWidth};
   }
 
@@ -701,7 +701,8 @@ class SvgItem extends React.PureComponent {
    * @returns {Point} Internal position Point object
    */
   getPosition() {
-    const {x, y} = this._getPosition(), strokeWidth = this.state.attributes['stroke-width'];
+    const {x, y} = this._getPosition();
+    const stroke = this.state.attributes['stroke'], strokeWidth = stroke ? this.state.attributes['stroke-width'] : 0;
     return {x: x-strokeWidth/2, y: y-strokeWidth/2};
   }
 
@@ -710,8 +711,8 @@ class SvgItem extends React.PureComponent {
    * @returns {Point} App position Point object
    */
   getAppPosition() {
-    const {attributes: {appX=0, appY=0}} = this.state, strokeWidth = this.state.attributes['stroke-width'];;
-    return {x: appX-strokeWidth/2, y: appY-strokeWidth/2}
+    const {attributes: {appX=0, appY=0}} = this.state;
+    return {x: appX, y: appY}
   }
 
   getParentViewBox() {
@@ -842,8 +843,8 @@ class SvgItem extends React.PureComponent {
     let {disabled} = this.props;
     let left = x, top = y;
 
-    // width = PixelRatio.roundToNearestPixel(width), height = PixelRatio.roundToNearestPixel(height);
-    // left = PixelRatio.roundToNearestPixel(appX), top = PixelRatio.roundToNearestPixel(appY);
+    width = PixelRatio.roundToNearestPixel(width), height = PixelRatio.roundToNearestPixel(height);
+    left = PixelRatio.roundToNearestPixel(left), top = PixelRatio.roundToNearestPixel(top);
 
     this._calculateInternalScale();
 
@@ -938,6 +939,39 @@ class SvgAsyncItem extends SvgItem {
 
 }
 
+class SvgPlainItem extends SvgItem {
+  onSvgLayout = ({nativeEvent}) => {
+    // console.log(nativeEvent.layout);
+  }
+}
+
+class SvgLineItem extends SvgItem {
+  _initAttributes(a) {
+    let attributes = super._initAttributes(a);
+
+    attributes['x1'] = valueOrDefault(attributes['x1'], 0);
+    attributes['y1'] = valueOrDefault(attributes['y1'], 0);
+    attributes['x2'] = valueOrDefault(attributes['x2'], 0);
+    attributes['y2'] = valueOrDefault(attributes['y2'], 0);
+
+    let {x1, y1, x2, y2} = attributes;
+    let minX = Math.min(x1, x2), minY = Math.min(y1, y2), width = Math.abs(x2 - x1), height = Math.abs(y2 - y1);
+
+    attributes['appX'] = valueOrDefault(attributes['appX'], minX);
+    attributes['appY'] = valueOrDefault(attributes['appY'], minY);
+    attributes['width'] = valueOrDefault(attributes['width'], width);
+    attributes['height'] = valueOrDefault(attributes['height'], height);
+
+    console.log(attributes)
+    return attributes;
+  }
+
+  _getPosition() {
+    const {x1, y1, x2, y2} = this.state.attributes;
+    return {x: Math.min(x1, x2), y: Math.min(y1, y2)};
+  }
+}
+
 class SvgRectItem extends SvgItem {
   _initAttributes(a) {
     let attributes = super._initAttributes(a);
@@ -949,21 +983,6 @@ class SvgRectItem extends SvgItem {
 
     return attributes;
   }
-  
-  // transform(a) {
-  //   let attributes = super.transform(a);
-
-  //   if (attributes['stroke-width']) {
-  //     let strokeWidth = attributes['stroke-width'];
-
-  //     attributes['x'] += strokeWidth/2;
-  //     attributes['y'] += strokeWidth/2;
-  //     attributes['width'] -= strokeWidth;
-  //     attributes['height'] -= strokeWidth;
-  //   }
-
-  //   return attributes;
-  // }
 
   // renderContent() {
   //   let {rx} = this.state.attributes;
@@ -994,10 +1013,9 @@ class SvgPolygonItem extends SvgItem {
     // set initial app coordinate from points
     let points = attributes['points'], xCoor = points.map(p => p.x), yCoor = points.map(p => p.y);
     let minX = Math.min(...xCoor), maxX = Math.max(...xCoor), minY = Math.min(...yCoor), maxY = Math.max(...yCoor);
-    let strokeWidth = attributes['stroke-width'];
 
-    attributes['appX'] = valueOrDefault(attributes['appX'], minX - strokeWidth);
-    attributes['appY'] = valueOrDefault(attributes['appY'], minY - strokeWidth);
+    attributes['appX'] = valueOrDefault(attributes['appX'], minX);
+    attributes['appY'] = valueOrDefault(attributes['appY'], minY);
     attributes['width'] = valueOrDefault(attributes['width'], maxX - minX);
     attributes['height'] = valueOrDefault(attributes['height'], maxY - minY);
 
@@ -1013,7 +1031,7 @@ class SvgPolygonItem extends SvgItem {
   }
 
   _getPosition() {
-    const {points} = this.state.attributes, strokeWidth = this.state.attributes['stroke-width'];
+    const {points} = this.state.attributes;
     const x = Math.min(...points.map(p => p.x)), y = Math.min(...points.map(p => p.y));
     return {x, y};
   }
@@ -1126,12 +1144,6 @@ class SvgCircleItem extends SvgItem {
   _getPosition() {
     const {attributes: {cx, cy, r}} = this.state;
     return {x: cx - r, y: cy - r};
-  }
-}
-
-class SvgPlainItem extends SvgItem {
-  onSvgLayout = ({nativeEvent}) => {
-    // console.log(nativeEvent.layout);
   }
 }
 
@@ -1417,6 +1429,7 @@ export default SvgItem;
 export {
   SvgItem,
   SvgEmptyItem,
+  SvgLineItem,
   SvgRectItem,
   SvgPolygonItem,
   SvgEllipseItem,

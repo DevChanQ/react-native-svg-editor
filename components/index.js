@@ -8,7 +8,8 @@ import { PortalProvider, PortalHost } from '@gorhom/portal';
 import { parse as svgsonParse, stringify } from 'svgson';
 import Immutable, { fromJS } from 'immutable';
 
-import SvgItem, { 
+import SvgItem, {
+  SvgLineItem,
   SvgRectItem,
   SvgPolygonItem,
   SvgEllipseItem,
@@ -111,6 +112,7 @@ class SvgGroupItem extends SvgItem {
 const ITEM_MAPPING = {
   path: SvgPathItem,
   rect: SvgRectItem,
+  line: SvgLineItem,
   polygon: SvgPolygonItem,
   circle: SvgCircleItem,
   ellipse: SvgEllipseItem,
@@ -422,11 +424,9 @@ class SvgEditor extends React.PureComponent {
     let nodes = Object.keys(this.itemRefs).filter(key => !(key == 'frame' || key == id))
       .map(key => {
         if (this.itemRefs[key].current) {
-          const attributes = this.itemRefs[key].current.attributes;
+          const { x, y } = this.itemRefs[key].current.getAppPosition();
           const { width, height } = this.itemRefs[key].current.getSize();
-          return {
-            x: attributes.appX, y: attributes.appY, width, height,
-          };
+          return { x, y, width, height };
         } 
 
         return null;
