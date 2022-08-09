@@ -309,6 +309,24 @@ class SvgItem extends React.PureComponent {
    _initAttributes(a) {
     let attributes = {...a};
 
+    // default fill color if fill is not defined
+    // attributes['fill'] = attributes['fill'] || 'black';
+    attributes['fill'] = valueOrDefault(attributes['fill'], '#000');
+    attributes['fill-opacity'] = valueOrDefault(attributes['fill-opacity'], 1);
+    // stroke-width if stroke-width is not defined and stroke is
+    attributes['stroke'] = valueOrDefault(attributes['stroke'], '');
+    attributes['stroke-width'] = valueOrDefault(attributes['stroke-width'], 1);
+    attributes['stroke-opacity'] = valueOrDefault(attributes['stroke-opacity'], 1);
+
+
+    // TODO: init rect (appX, appY, appWidth, appHeight)
+    // const {width, height, x, y} = this._initAppRect(attributes);
+    // attributes['devjeff:width'] = valueOrDefault(attributes['devjeff:width'], width);
+    // attributes['devjeff:height'] = valueOrDefault(attributes['devjeff:height'], height);
+    // attributes['devjeff:x'] = valueOrDefault(attributes['devjeff:x'], x);
+    // attributes['devjeff:y'] = valueOrDefault(attributes['devjeff:y'], y);
+
+
     attributes['devjeff:locked'] = valueOrDefault(attributes['devjeff:locked'], 0);
 
     // transform attributes init
@@ -334,13 +352,6 @@ class SvgItem extends React.PureComponent {
 
       delete attributes['transform'];
     }
-
-    // default fill color if fill is not defined
-    // attributes['fill'] = attributes['fill'] || 'black';
-    // stroke-width if stroke-width is not defined and stroke is
-    attributes['stroke-width'] = parseFloat(attributes['stroke-width'] || (attributes['stroke'] ? 1 : 0));
-    attributes['stroke'] = valueOrDefault(attributes['stroke'], attributes['stroke-width'] ? 'black' : '');
-
 
     // gradient attribute if relevent
     if (attributes['fill']?.url && !attributes['devjeff:gradient']) {
@@ -377,6 +388,30 @@ class SvgItem extends React.PureComponent {
     return attributes;
   }
 
+  /**
+   * Point object
+   * @typedef {Object} Point
+   * @property {number} x - coordinate x of rect
+   * @property {number} y - coordinate y of rect
+   */
+
+  /**
+   * Rect object
+   * @typedef {Object} Rect
+   * @property {number} width - width of rect
+   * @property {number} height - height of rect
+   * @property {number} x - coordinate x of rect
+   * @property {number} y - coordinate y of rect
+   */
+  
+  /**
+   * Override to provide custom app rect provider
+   * @returns {Rect} rect object
+   */
+  _initAppRect(attributes) {
+    const {width=0, height=0, x=0, y=0} = attributes;
+    return {width, height, x, y};
+  }
 
   _calculateInternalScale() {
     // set interal scale
@@ -389,7 +424,7 @@ class SvgItem extends React.PureComponent {
   }
 
   /**
-   * Get info from props and parse serialise attributes to js values
+   * Get info from props and serializee attributes to js values
    */
   _getAttributesFromProps() {
     let {info} = this.props;
@@ -399,7 +434,25 @@ class SvgItem extends React.PureComponent {
     for (let key in attributes) {
       let attr = attributes[key];
 
-      if (typeof attr === 'string' && attr.includes("url(")) {
+      // skip serialisig if attribute is not a string
+      if (typeof attr !== 'string') continue;
+
+      // special case for polygon/polyline points attr
+      if (key === 'points') {
+        console.log(attr);
+
+        let points = attr.split(" ");
+        attributes[key] = points.map(p => {
+          if (!p) return null;
+
+          const coor = p.split(",");
+          return {x: parseFloat(coor[0]), y: parseFloat(coor[1])}
+        }).filter(p => !!p);
+
+        continue;
+      }
+
+      if (attr.includes("url(")) {
         // url value
         let url = attr.split('(')[1].slice(0, -1);
         attributes[key] = { url };
@@ -595,7 +648,7 @@ class SvgItem extends React.PureComponent {
   }
 
   /**
-   * Transform attributes for displaying/rendering, override to customize. Called by `_generateXml`
+   * Transform attributes for displaying/rendering, override to customize. Called by `_generateXml` \
    * Some attrbiutes of elements such as `<rect>` needs to be transformed under certain situations,
    * for example `<rect>` with `stroke-width`
    * @param {object} attributes
@@ -615,21 +668,50 @@ class SvgItem extends React.PureComponent {
   }
 
   /**
-   * Returns size of element (from internal state)
+   * Returns size of element (from internal state), not offset by strokeWidth \
+   * Override this method in subclass to implement custom size provider
    * @returns {object} Size object containing width and height
    */
-  getSize() {
+  _getSize() {
     const {attributes: {width=0, height=0}} = this.state;
     return {width, height};
   }
 
   /**
-   * Returns position of element
-   * @returns {object} Position object containing width and height
+   * Returns position of element (from internal state), not offset by strokeWidth \
+   * Override this method in subclass to implement custom size provider
+   * @returns {Point} Point object
    */
-  getPosition() {
+   _getPosition() {
     const {attributes: {x=0, y=0}} = this.state;
     return {x, y};
+  }
+
+  /**
+   * Returns size of element including stroke width
+   * @returns {object} Size object containing width and height
+   */
+  getSize() {
+    const {width, height} = this._getSize(), strokeWidth = this.state.attributes['stroke-width'];
+    return {width: width+strokeWidth, height: height+strokeWidth};
+  }
+
+  /**
+   * Returns internal position used for viewbox
+   * @returns {Point} Internal position Point object
+   */
+  getPosition() {
+    const {x, y} = this._getPosition(), strokeWidth = this.state.attributes['stroke-width'];
+    return {x: x-strokeWidth/2, y: y-strokeWidth/2};
+  }
+
+  /**
+   * Returns app position used for rendering
+   * @returns {Point} App position Point object
+   */
+  getAppPosition() {
+    const {attributes: {appX=0, appY=0}} = this.state, strokeWidth = this.state.attributes['stroke-width'];;
+    return {x: appX-strokeWidth/2, y: appY-strokeWidth/2}
   }
 
   getParentViewBox() {
@@ -755,11 +837,10 @@ class SvgItem extends React.PureComponent {
   }
 
   render() {
-    let {appX=0, appY=0, opacity=1} = this.state.attributes;
-    let {width, height} = this.getSize();
+    let {width, height} = this.getSize(), {x, y} = this.getAppPosition();
     let {rotate, scaleX, scaleY, skewX, skewY, matrix} = this.transformAttributes;
     let {disabled} = this.props;
-    let left = appX, top = appY;
+    let left = x, top = y;
 
     // width = PixelRatio.roundToNearestPixel(width), height = PixelRatio.roundToNearestPixel(height);
     // left = PixelRatio.roundToNearestPixel(appX), top = PixelRatio.roundToNearestPixel(appY);
@@ -795,7 +876,6 @@ class SvgItem extends React.PureComponent {
         
             <View pointerEvents='none' style={{
               transform: [{scaleX}, {scaleY},],
-              opacity,
             }}>
               {this.renderContent()}
             </View>
@@ -870,20 +950,20 @@ class SvgRectItem extends SvgItem {
     return attributes;
   }
   
-  transform(a) {
-    let attributes = super.transform(a);
+  // transform(a) {
+  //   let attributes = super.transform(a);
 
-    if (attributes['stroke-width']) {
-      let strokeWidth = attributes['stroke-width'];
+  //   if (attributes['stroke-width']) {
+  //     let strokeWidth = attributes['stroke-width'];
 
-      attributes['x'] += strokeWidth/2;
-      attributes['y'] += strokeWidth/2;
-      attributes['width'] -= strokeWidth;
-      attributes['height'] -= strokeWidth;
-    }
+  //     attributes['x'] += strokeWidth/2;
+  //     attributes['y'] += strokeWidth/2;
+  //     attributes['width'] -= strokeWidth;
+  //     attributes['height'] -= strokeWidth;
+  //   }
 
-    return attributes;
-  }
+  //   return attributes;
+  // }
 
   // renderContent() {
   //   let {rx} = this.state.attributes;
@@ -905,6 +985,38 @@ class SvgRectItem extends SvgItem {
 
   //   return super.renderContent();
   // }
+}
+
+class SvgPolygonItem extends SvgItem {
+  _initAttributes(a) {
+    let attributes = super._initAttributes(a);
+
+    // set initial app coordinate from points
+    let points = attributes['points'], xCoor = points.map(p => p.x), yCoor = points.map(p => p.y);
+    let minX = Math.min(...xCoor), maxX = Math.max(...xCoor), minY = Math.min(...yCoor), maxY = Math.max(...yCoor);
+    let strokeWidth = attributes['stroke-width'];
+
+    attributes['appX'] = valueOrDefault(attributes['appX'], minX - strokeWidth);
+    attributes['appY'] = valueOrDefault(attributes['appY'], minY - strokeWidth);
+    attributes['width'] = valueOrDefault(attributes['width'], maxX - minX);
+    attributes['height'] = valueOrDefault(attributes['height'], maxY - minY);
+
+    return attributes;
+  }
+  
+  transform(a) {
+    let attributes = super.transform(a);
+
+    attributes['points'] = attributes['points'].map(p => `${p.x},${p.y}`).join(" ");
+
+    return attributes;
+  }
+
+  _getPosition() {
+    const {points} = this.state.attributes, strokeWidth = this.state.attributes['stroke-width'];
+    const x = Math.min(...points.map(p => p.x)), y = Math.min(...points.map(p => p.y));
+    return {x, y};
+  }
 }
 
 class SvgEllipseItem extends SvgItem {
@@ -936,12 +1048,12 @@ class SvgEllipseItem extends SvgItem {
   transform(a) {
     let attributes = super.transform(a);
 
-    if (attributes['stroke-width']) {
-      let strokeWidth = attributes['stroke-width'];
+    // if (attributes['stroke-width']) {
+    //   let strokeWidth = attributes['stroke-width'];
 
-      attributes['rx'] -= strokeWidth/2;
-      attributes['ry'] -= strokeWidth/2;
-    }
+    //   attributes['rx'] -= strokeWidth/2;
+    //   attributes['ry'] -= strokeWidth/2;
+    // }
 
     return attributes;
   }
@@ -970,12 +1082,12 @@ class SvgEllipseItem extends SvgItem {
     }
   }
 
-  getSize() {
+  _getSize() {
     const {rx, ry} = this.state.attributes;
     return {width: rx*2, height: ry*2};
   }
 
-  getPosition() {
+  _getPosition() {
     const {attributes: {cx, cy, rx, ry}} = this.state;
     return {x: cx - rx, y: cy - ry};
   }
@@ -983,35 +1095,35 @@ class SvgEllipseItem extends SvgItem {
 
 class SvgCircleItem extends SvgItem {
   _initAttributes(a) {
-    let attributes = {...a};
+    let attributes = super._initAttributes(a);
 
-    attributes['r'] = valueOrDefault(attributes['r'], 0);
-    attributes['cx'] = valueOrDefault(attributes['cx'], 0);
-    attributes['cy'] = valueOrDefault(attributes['cy'], 0);
-    attributes['appX'] = valueOrDefault(attributes['appX'], attributes['cx'] - attributes['r']);
-    attributes['appY'] = valueOrDefault(attributes['appY'], attributes['cy'] - attributes['r']);
-    
+    let r = valueOrDefault(attributes['r'], 0);
+    let cx = valueOrDefault(attributes['cx'], 0), cy = valueOrDefault(attributes['cy'], 0);
+
+    attributes['appX'] = valueOrDefault(attributes['appX'], cx - r);
+    attributes['appY'] = valueOrDefault(attributes['appY'], cy - r);
+
     return attributes;
   }
 
   transform(a) {
     let attributes = super.transform(a);
 
-    if (attributes['stroke-width']) {
-      let strokeWidth = attributes['stroke-width'];
+    // if (attributes['stroke-width']) {
+    //   let strokeWidth = attributes['stroke-width'];
 
-      attributes['r'] -= strokeWidth/2;
-    }
+    //   attributes['r'] -= strokeWidth/2;
+    // }
 
     return attributes;
   }
 
-  getSize() {
+  _getSize() {
     const {r} = this.state.attributes;
     return {width: r*2, height: r*2};
   }
 
-  getPosition() {
+  _getPosition() {
     const {attributes: {cx, cy, r}} = this.state;
     return {x: cx - r, y: cy - r};
   }
@@ -1306,6 +1418,7 @@ export {
   SvgItem,
   SvgEmptyItem,
   SvgRectItem,
+  SvgPolygonItem,
   SvgEllipseItem,
   SvgCircleItem,
   SvgPlainItem,

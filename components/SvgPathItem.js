@@ -66,10 +66,6 @@ class SvgPathItem extends SvgItem {
     return {x: left, y: top};
   }
 
-  get strokeWidth() {
-    return this.state.attributes['stroke-width']
-  }
-
   onValueRefreshed = (changed) => {
     this.parsedPath = new Svg(this._lastAttributes['d']);
     this._startPoint = null;
@@ -84,8 +80,7 @@ class SvgPathItem extends SvgItem {
 
   _initAttributes(a) {
     let attributes = super._initAttributes(a), {d} = attributes;
-    let strokeWidth = valueOrDefault(attributes['stroke-width'], 0);
-    const rect = this.getBoundingBox(d, strokeWidth);
+    const rect = this.getBoundingBox(d);
 
     attributes['appX'] = valueOrDefault(attributes['appX'], rect.left);
     attributes['appY'] = valueOrDefault(attributes['appY'], rect.top);
@@ -150,7 +145,7 @@ class SvgPathItem extends SvgItem {
 
   updatePath(updateLocation=false) {
     const newPath = this.parsedPath.asString();
-    const rect = this.getBoundingBox(newPath, this.strokeWidth);
+    const rect = this.getBoundingBox(newPath);
 
     let { left, top } = rect;
     let { left: oldLeft, top: oldTop, appX, appY } = this._lastAttributes;
@@ -169,7 +164,7 @@ class SvgPathItem extends SvgItem {
 
   setPath(updateLocation=false) {
     const newPath = this.parsedPath.asString();
-    const rect = this.getBoundingBox(newPath, this.strokeWidth);
+    const rect = this.getBoundingBox(newPath);
 
     let { left, top } = rect;
     let { left: oldLeft, top: oldTop, appX, appY } = this._lastAttributes;
@@ -189,15 +184,10 @@ class SvgPathItem extends SvgItem {
   /**
    * Get the bounding box of the path
    * @param {string} path d attribute of path
-   * @param {number} strokeWidth stroke width of the element
    * @returns {object} rect object
    */
-  getBoundingBox(path, strokeWidth=0) {
+  getBoundingBox(path) {
     let [x0, y0, x1, y1] = getBBox(path);
-    x0 -= strokeWidth/2;
-    y0 -= strokeWidth/2;
-    x1 += strokeWidth/2;
-    y1 += strokeWidth/2;
 
     let width = x1-x0, height = y1-y0;
 
@@ -213,12 +203,7 @@ class SvgPathItem extends SvgItem {
     return rect;
   }
 
-  getPosition() {
-    const {attributes: {width, height}} = this.state;
-    return {width, height};
-  }
-
-  getPosition() {
+  _getPosition() {
     const {attributes: {left, top}} = this.state;
     return {x: left, y: top};
   }

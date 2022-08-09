@@ -10,6 +10,7 @@ import Immutable, { fromJS } from 'immutable';
 
 import SvgItem, { 
   SvgRectItem,
+  SvgPolygonItem,
   SvgEllipseItem,
   SvgCircleItem,
   SvgEmptyItem,
@@ -110,6 +111,7 @@ class SvgGroupItem extends SvgItem {
 const ITEM_MAPPING = {
   path: SvgPathItem,
   rect: SvgRectItem,
+  polygon: SvgPolygonItem,
   circle: SvgCircleItem,
   ellipse: SvgEllipseItem,
   svg: SvgGroupItem,
