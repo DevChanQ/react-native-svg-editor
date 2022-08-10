@@ -215,10 +215,11 @@ class SvgPathItem extends SvgItem {
     return viewBox;
   }
 
-  setSize({ width: newWidth, height: newHeight }, update=false) {
+  setSize({ width: newWidth, height: newHeight, update=false, offsetStrokeWidth=true }) {
+    const strokeWidth = offsetStrokeWidth ? this.state.attributes['stroke-width'] : 0;
     let {width, height} = this._lastAttributes;
     
-    let kx  = newWidth / width, ky = newHeight / height;
+    let kx  = (newWidth-strokeWidth) / width, ky = (newHeight-strokeWidth) / height;
     
     this.parsedPath.scale(kx/this._lastKX, ky/this._lastKY);
     this._lastKX = kx, this._lastKY = ky;
@@ -239,7 +240,7 @@ class SvgPathItem extends SvgItem {
       else newWidth = newHeight * this.aspectRatio;
     }
 
-    this.setSize({ width: newWidth, height: newHeight }, true);
+    this.setSize({ width: newWidth, height: newHeight, update: true, offsetStrokeWidth: false });
   }
 
   renderControlLayer() {

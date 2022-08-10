@@ -24,7 +24,7 @@ import SvgPathItem from './SvgPathItem';
 import PinchZoomView from './PinchZoomView';
 
 import { makeid } from '../utils';
-import cssjs from '../utils/css';
+import cssParser from '../utils/css';
 import calculateGuidelines from '../utils/guidelines';
 
 const vibrateMethod = Platform.select({
@@ -84,11 +84,6 @@ const styles = StyleSheet.create({
 });
 
 class SvgGroupItem extends SvgItem {
-  // getSize() {
-  //   const {attributes: {width=100, height=100}} = this.state;
-  //   return {width, height};
-  // }
-
   renderContent() {
     let svgson = this.props.info, children = svgson.get('children');
 
@@ -113,6 +108,7 @@ const ITEM_MAPPING = {
   path: SvgPathItem,
   rect: SvgRectItem,
   line: SvgLineItem,
+  polyline: SvgPolygonItem,
   polygon: SvgPolygonItem,
   circle: SvgCircleItem,
   ellipse: SvgEllipseItem,
@@ -151,8 +147,6 @@ class SvgEditor extends React.PureComponent {
   svgson = null;
   viewShot = React.createRef();
   pinchZoomViewRef = React.createRef();
-
-  parser = new cssjs();
 
   /** filters definition */
   filters = [];
@@ -236,7 +230,7 @@ class SvgEditor extends React.PureComponent {
     let styles = [];
     for (let style of styleElements) {
       let content = style.children[0].value;
-      styles = styles.concat(this.parser.parseCSS(content));
+      styles = styles.concat(cssParser.parseCSS(content));
     }
 
     if (styles.length > 0) {

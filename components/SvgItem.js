@@ -16,7 +16,9 @@ import { State, PanGestureHandler, PinchGestureHandler, TapGestureHandler } from
 import RNFS from 'react-native-fs';
 import { stringify } from "svgson";
 import { Portal } from '@gorhom/portal';
+import { fromJS } from 'immutable';
 
+import cssParser from '../utils/css';
 import { mergeDeep, valueOrDefault } from '../utils';
 import GradientControlLayer from './SvgItemControlLayer/GradientControlLayer';
 
@@ -68,16 +70,6 @@ const SvgEmptyItem = () => <></>;
 
 class SvgItem extends React.PureComponent {
 
-  /** Default Props */
-  static defaultProps = {
-    scale: 1,
-
-    positionOffset: { x: 0, y: 0 },
-
-    /** Gradients elements svgson */
-    gradients: [],
-  };
-
   state = { attributes: {} };
 
   // private variables
@@ -89,6 +81,8 @@ class SvgItem extends React.PureComponent {
 
   _stateRefreshed = false;
   _attrDiff = null;
+
+  _children = fromJS([]);
 
   controlColor = '#19A0FB';
 
@@ -309,23 +303,22 @@ class SvgItem extends React.PureComponent {
    _initAttributes(a) {
     let attributes = {...a};
 
+    // Inline css style trumps attributes for priority
+    // https://stackoverflow.com/questions/24293880/svg-why-does-external-css-override-inline-style-for-text
+    if (attributes['style']) {
+      const parsedCss = cssParser.parseCSS(`#temp { ${attributes['style']} }`), rules = parsedCss[0]?.rules || [];
+      for (let rule of rules) attributes[rule.directive] = rule.value;
+      delete attributes['style'];
+    }
+
     // default fill color if fill is not defined
     // attributes['fill'] = attributes['fill'] || 'black';
-    attributes['fill'] = valueOrDefault(attributes['fill'], '#000');
+    attributes['fill'] = valueOrDefault(attributes['fill'], '#000000');
     attributes['fill-opacity'] = valueOrDefault(attributes['fill-opacity'], 1);
     // stroke-width if stroke-width is not defined and stroke is
     attributes['stroke'] = valueOrDefault(attributes['stroke'], '');
-    attributes['stroke-width'] = valueOrDefault(attributes['stroke-width'], 1);
+    attributes['stroke-width'] = valueOrDefault(attributes['stroke-width'], attributes['stroke'] ? 1 : 0);
     attributes['stroke-opacity'] = valueOrDefault(attributes['stroke-opacity'], 1);
-
-
-    // TODO: init rect (appX, appY, appWidth, appHeight)
-    // const {width, height, x, y} = this._initAppRect(attributes);
-    // attributes['devjeff:width'] = valueOrDefault(attributes['devjeff:width'], width);
-    // attributes['devjeff:height'] = valueOrDefault(attributes['devjeff:height'], height);
-    // attributes['devjeff:x'] = valueOrDefault(attributes['devjeff:x'], x);
-    // attributes['devjeff:y'] = valueOrDefault(attributes['devjeff:y'], y);
-
 
     attributes['devjeff:locked'] = valueOrDefault(attributes['devjeff:locked'], 0);
 
@@ -439,13 +432,17 @@ class SvgItem extends React.PureComponent {
 
       // special case for polygon/polyline points attr
       if (key === 'points') {
-        console.log(attr);
-
         let points = attr.split(" ");
-        attributes[key] = points.map(p => {
+        attributes[key] = points.map((p, index) => {
           if (!p) return null;
 
           const coor = p.split(",");
+
+          if (!coor[1]) {
+            if ((index + 1) % 2 == 0) return null;
+            return {x: parseFloat(coor[0]), y: parseFloat(points[index+1])}
+          }
+
           return {x: parseFloat(coor[0]), y: parseFloat(coor[1])}
         }).filter(p => !!p);
 
@@ -480,6 +477,8 @@ class SvgItem extends React.PureComponent {
     // update aspect ratio
     const {width, height} = this.getSize();
     this.aspectRatio = width / height;
+
+    this._children = this.props.info.get("children");
 
     // call onValueRefreshed callback
     this.onValueRefreshed(changed);
@@ -725,8 +724,9 @@ class SvgItem extends React.PureComponent {
    * @param {number} size.width new width
    * @param {number} size.height new height
    */
-  setSize({ width, height }, update=false) {
-    width = parseFloat(width), height = parseFloat(height);
+  setSize({ width, height, update=false, offsetStrokeWidth=true }) {
+    const strokeWidth = offsetStrokeWidth ? this.state.attributes['stroke-width'] : 0;
+    width = parseFloat(width) - strokeWidth, height = parseFloat(height) - strokeWidth;
     if (update) {
       this.updateAttributes({ width, height });
     } else {
@@ -839,9 +839,21 @@ class SvgItem extends React.PureComponent {
 
   render() {
     let {width, height} = this.getSize(), {x, y} = this.getAppPosition();
-    let {rotate, scaleX, scaleY, skewX, skewY, matrix} = this.transformAttributes;
+    let {rotate, scaleX, scaleY, skewX, skewY} = this.transformAttributes;
     let {disabled} = this.props;
     let left = x, top = y;
+
+    if (Number.isNaN(width) || Number.isNaN(height)) {
+      console.warn("getSize returned size object with NaN, setting width and height to 0 to avoid react native error");
+      console.warn(`Please investigate problem`, `id - ${this.props.id}`, this.getSize());
+      width = 0; height = 0;
+    }
+
+    if (Number.isNaN(left) || Number.isNaN(top)) {
+      console.warn("getAppPosition returned size object with NaN, setting x and y to 0 to avoid react native error");
+      console.warn(`Please investigate problem`, `id - ${this.props.id}`, this.getAppPosition());
+      left = 0; top = 0;
+    }
 
     width = PixelRatio.roundToNearestPixel(width), height = PixelRatio.roundToNearestPixel(height);
     left = PixelRatio.roundToNearestPixel(left), top = PixelRatio.roundToNearestPixel(top);
@@ -962,7 +974,6 @@ class SvgLineItem extends SvgItem {
     attributes['width'] = valueOrDefault(attributes['width'], width);
     attributes['height'] = valueOrDefault(attributes['height'], height);
 
-    console.log(attributes)
     return attributes;
   }
 
@@ -1020,6 +1031,16 @@ class SvgPolygonItem extends SvgItem {
     attributes['height'] = valueOrDefault(attributes['height'], maxY - minY);
 
     return attributes;
+  }
+
+  toSvgson(external=true) {
+    let info = super.toSvgson(external), {attributes} = info;
+    attributes['points'] = this.state.attributes['points'].map(p => `${p.x},${p.y}`).join(" ");
+
+    delete attributes['appX'];
+    delete attributes['appY'];
+    
+    return info;
   }
   
   transform(a) {
@@ -1089,8 +1110,9 @@ class SvgEllipseItem extends SvgItem {
     this.updateAttributes({ rx, ry });
   }
   
-  setSize({ width, height }, update=false) {
-    width = parseFloat(width), height = parseFloat(height);
+  setSize({ width, height, update=false, offsetStrokeWidth=true }) {
+    const strokeWidth = offsetStrokeWidth ? this.state.attributes['stroke-width'] : 0;
+    width = parseFloat(width) - strokeWidth, height = parseFloat(height) - strokeWidth;
     let rx = width / 2, ry = height / 2;
 
     if (update) {
@@ -1155,8 +1177,8 @@ class SvgTextItem extends SvgItem {
   manuallyEdited = false;
 
   get text() {
-    let children = this.props.info.get('children').toJS();
-    return children.filter(child => child.type === "text")[0]?.value || "";
+    let children = this.props.info.toJS()['children'];
+    return children?.filter(child => child.type === "text")[0]?.value || "";
   }
 
   get fontSize() {
@@ -1225,9 +1247,7 @@ class SvgTextItem extends SvgItem {
 
   onSubmitEditing = ({ nativeEvent: { text }}) => {
     this.setElement({
-      children: [{
-        "value": text,
-      }]
+      children: [{ "value": text, "type": "text" }]
     });
   }
 
@@ -1274,7 +1294,13 @@ class SvgTextItem extends SvgItem {
 
     if (editMode) {
       return (
-        <TextInput style={style} defaultValue={this.text} onBlur={this.onBlur} onSubmitEditing={this.onSubmitEditing} autoFocus blurOnSubmit />
+        <TextInput
+          style={style}
+          defaultValue={this.text}
+          onBlur={this.onBlur}
+          onSubmitEditing={this.onSubmitEditing}
+          autoFocus
+          blurOnSubmit />
       )
     }
 
@@ -1420,9 +1446,13 @@ SvgItem.propTypes = {
   offsetPositionToGuideline: PropTypes.func,
 };
 SvgItem.defaultProps = {
+  info: fromJS({}),
   disabled: false,
   selected: false,
   scale: 1,
+  /** Gradients elements svgson */
+  gradients: [],
+  positionOffset: { x: 0, y: 0 },
 };
 
 export default SvgItem;
