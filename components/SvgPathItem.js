@@ -82,6 +82,7 @@ class SvgPathItem extends SvgItem {
     let attributes = super._initAttributes(a), {d} = attributes;
     const rect = this.getBoundingBox(d);
 
+    attributes['fill'] = valueOrDefault(attributes['fill'], '#000000');
     attributes['appX'] = valueOrDefault(attributes['appX'], rect.left);
     attributes['appY'] = valueOrDefault(attributes['appY'], rect.top);
 

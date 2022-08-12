@@ -66,11 +66,16 @@ const styles = StyleSheet.create({
   }
 });
 
+const EMPTY_OBJECT = {};
+
 const SvgEmptyItem = () => <></>;
 
 class SvgItem extends React.PureComponent {
 
-  state = { attributes: {} };
+  state = {
+    attributes: EMPTY_OBJECT,
+    gradientEditing: false
+  };
 
   // private variables
   _doubleTapRef = React.createRef();
@@ -89,6 +94,8 @@ class SvgItem extends React.PureComponent {
   constructor(props) {
     super(props);
 
+    console.log('SvgItem.constructor(): ', props.id);
+
     this._lastAttributes = this._getAttributesFromProps();
     this._initialAttributes = { ...this._lastAttributes };
     this.state = {
@@ -96,16 +103,10 @@ class SvgItem extends React.PureComponent {
       attributes: { ...this._lastAttributes },
     };
   }
-
-  componentDidMount() {
-    const attributes = this.props.info.get('attributes').toJS();
-    this.onInit(attributes);
-    this._onRefresh(attributes);
-  }
-
+  
   componentDidUpdate({info}) {
+    console.log('SvgItem.conponentDidUpdate(): ', this.props.id);
     const {info: newInfo, id} = this.props;
-    console.log('SvgItem.conponentDidUpdate(): ', id);
 
     // update internal state if new props is provided
     if (!newInfo.equals(info)) {
@@ -113,14 +114,11 @@ class SvgItem extends React.PureComponent {
 
       const newAttributes = newInfo.get('attributes'), oldAttributes = info.get('attributes');
       this._attrDiff = newAttributes.filter((v, k) => oldAttributes.get(k) !== v);
-
-      this._stateRefreshed = true;
       this.refreshValues();
     } else if (this._stateRefreshed) {
       console.log(`SvgItem (${id}): state refreshed and updated, call _onRefresh`);
 
       this._onRefresh(this._attrDiff);
-      this._stateRefreshed = false;
     }
   }
 
@@ -132,6 +130,21 @@ class SvgItem extends React.PureComponent {
     return this.props.info?.get('name');
   }
 
+  /** Getter of scope level in integer number. Root level == 1 */
+  get scopeLevel() {
+    if (this.props.scope === null) return 0;
+
+    const splitted = this.props.scope.split(GroupScopeSeparator);
+    return splitted.length;
+  }
+
+  /** Getter of this element's scope level in integer number. Root level == 1 */
+  get elementScopeLevel() {
+    const splitted = this.props.id.split(GroupScopeSeparator);
+    return splitted.length - 1;
+  }
+
+  // boolean flag getters
   get translateEnabled() {
     return !this.locked && this.selected && !this.isEditingGradient;
   }
@@ -140,9 +153,44 @@ class SvgItem extends React.PureComponent {
     return this.state.attributes.id === 'frame';
   }
 
+  get inScope() {
+    const scope = this.props.scope;
+    const splitted = this.props.id.split(GroupScopeSeparator);
+
+    // root scope
+    if (scope === null) return splitted.length === 1;
+
+    splitted.pop();
+    return splitted.join(GroupScopeSeparator) === scope;
+  }
+
+  get isTransparent() {
+    return !this.inScope && this.elementScopeLevel < this.scopeLevel && this.props.scope !== this.props.id;
+  }
+
   get isGradientFill() {
     // TODO: fill attributes can be a url and not a gradient (background image)
     return !!this.state.attributes.fill?.url;
+  }
+
+  get isEditingGradient() {
+    return this.state.gradientEditing && this.isGradientFill;
+  }
+
+  get locked() {
+    return !!this.state.attributes['devjeff:locked'] || this.isFrame;
+  }
+
+  get aspectLocked() {
+    return !!this.state.attributes['devjeff:aspectLocked'];
+  }
+
+  get selected() {
+    return this.props.selected == this.id;
+  }
+
+  get disabled() {
+    return this.props.disabled || !this.inScope;
   }
 
   get gradientFill() {
@@ -199,28 +247,12 @@ class SvgItem extends React.PureComponent {
     return [];
   }
 
-  get isEditingGradient() {
-    return this.state.gradientEditing && this.isGradientFill;
-  }
-
   get attributes() {
     return this.state.attributes;
   }
 
   get lastAttributes() {
     return this._lastAttributes;
-  }
-
-  get locked() {
-    return !!this.state.attributes['devjeff:locked'] || this.isFrame;
-  }
-
-  get aspectLocked() {
-    return !!this.state.attributes['devjeff:aspectLocked'];
-  }
-
-  get selected() {
-    return this.props.selected;
   }
 
   get transformAttributes() {
@@ -288,8 +320,10 @@ class SvgItem extends React.PureComponent {
     return info;
   }
 
-  refreshValues() {
+  refreshValues(initial=false) {
+    this._stateRefreshed = true;
     this._lastAttributes = this._getAttributesFromProps();
+    this._initialAttributes = { ...this._lastAttributes };
     this.setState({attributes: { ...this._lastAttributes }});
   }
 
@@ -313,7 +347,6 @@ class SvgItem extends React.PureComponent {
 
     // default fill color if fill is not defined
     // attributes['fill'] = attributes['fill'] || 'black';
-    attributes['fill'] = valueOrDefault(attributes['fill'], '#000000');
     attributes['fill-opacity'] = valueOrDefault(attributes['fill-opacity'], 1);
     // stroke-width if stroke-width is not defined and stroke is
     attributes['stroke'] = valueOrDefault(attributes['stroke'], '');
@@ -482,6 +515,8 @@ class SvgItem extends React.PureComponent {
 
     // call onValueRefreshed callback
     this.onValueRefreshed(changed);
+
+    this._stateRefreshed = false;
   }
 
   setElement(svgson) {
@@ -710,8 +745,9 @@ class SvgItem extends React.PureComponent {
    * @returns {Point} App position Point object
    */
   getAppPosition() {
-    const {attributes: {appX=0, appY=0}} = this.state;
-    return {x: appX, y: appY}
+    const {attributes: {appX=0, appY=0}} = this.state, {positionOffset} = this.props;
+    // console.log(positionOffset)
+    return {x: appX-positionOffset.x, y: appY-positionOffset.y}
   }
 
   getParentViewBox() {
@@ -838,9 +874,12 @@ class SvgItem extends React.PureComponent {
   }
 
   render() {
-    let {width, height} = this.getSize(), {x, y} = this.getAppPosition();
+    if (this.state.attributes == EMPTY_OBJECT) {
+      return <View />
+    }
+
+    let {positionOffset} = this.props,{width, height} = this.getSize(), {x, y} = this.getAppPosition();
     let {rotate, scaleX, scaleY, skewX, skewY} = this.transformAttributes;
-    let {disabled} = this.props;
     let left = x, top = y;
 
     if (Number.isNaN(width) || Number.isNaN(height)) {
@@ -861,42 +900,43 @@ class SvgItem extends React.PureComponent {
     this._calculateInternalScale();
 
     return (
+      <View style={{
+        position: 'absolute',
+        width, height, left, top,
+        opacity: this.isTransparent ? 0.2 : 1,
+        transform: [
+          {skewX: `${skewX}deg`},
+          {skewY: `${skewY}deg`},
+
+          {translateX: -width/2},
+          {translateY: -height/2},
+          {rotate: `${rotate}deg`},
+          {translateX: width/2},
+          {translateY: height/2},
+        ]
+      }}>
       <TapGestureHandler
         ref={this._doubleTapRef}
-        enabled={!this.locked && !disabled}
+        enabled={!this.locked && !this.disabled}
         onHandlerStateChange={this._onDoubleTap}
         numberOfTaps={2}>
         <PanGestureHandler
-          enabled={!disabled}
+          enabled={!this.disabled}
           minPointers={1}
           maxPointers={1}
           onGestureEvent={this.onPan}
           onHandlerStateChange={this.onPanStateChanged}>
           <View style={{
-            position: 'absolute',
-            width, height, left, top,
-            transform: [
-              {skewX: `${skewX}deg`},
-              {skewY: `${skewY}deg`},
-
-              {translateX: -width/2},
-              {translateY: -height/2},
-              {rotate: `${rotate}deg`},
-              {translateX: width/2},
-              {translateY: height/2},
-            ]
+            width: '100%', height: '100%',
+            transform: [{scaleX}, {scaleY},],
           }}>
-        
-            <View pointerEvents='none' style={{
-              transform: [{scaleX}, {scaleY},],
-            }}>
-              {this.renderContent()}
-            </View>
+
+            {this.renderContent()}
 
             <Portal hostName="controlLayerPortal">
               <View pointerEvents='box-none' style={{
                 position: 'absolute',
-                width, height, left, top
+                width, height, left: left + positionOffset.x, top: top + positionOffset.y
               }}>
                 { this.selected ? this.renderControlLayer() : null }
               </View>
@@ -905,6 +945,7 @@ class SvgItem extends React.PureComponent {
           </View>
         </PanGestureHandler>
       </TapGestureHandler>
+      </View>
     );
   }
 }
@@ -1207,12 +1248,6 @@ class SvgTextItem extends SvgItem {
     return attributes;
   }
 
-  onInit = (attributes) => {
-    if (attributes['width'] && attributes['height']) {
-      this.manuallyEdited = true;
-    }
-  }
-
   onValueRefreshed = (changed) => {
     this.valueRefreshed = true;
   }
@@ -1435,11 +1470,13 @@ class SvgUseItem extends SvgItem {
 SvgItem.propTypes = {
   info: PropTypes.object.isRequired,
   id: PropTypes.string.isRequired,
-  
+
   scale: PropTypes.number,
   disabled: PropTypes.bool,
-  selected: PropTypes.bool,
+  selected: PropTypes.string,
+  scope: PropTypes.string,
 
+  setScope: PropTypes.func,
   onPanBegan: PropTypes.func,
   onPanEnded: PropTypes.func,
   onTap: PropTypes.func,
@@ -1447,6 +1484,7 @@ SvgItem.propTypes = {
 };
 SvgItem.defaultProps = {
   info: fromJS({}),
+  scope: null,
   disabled: false,
   selected: false,
   scale: 1,
@@ -1455,6 +1493,7 @@ SvgItem.defaultProps = {
   positionOffset: { x: 0, y: 0 },
 };
 
+export const GroupScopeSeparator = "@";
 export default SvgItem;
 export {
   SvgItem,

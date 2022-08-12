@@ -8,18 +8,18 @@ import { PortalProvider, PortalHost } from '@gorhom/portal';
 import { parse as svgsonParse, stringify } from 'svgson';
 import Immutable, { fromJS } from 'immutable';
 
-import SvgItem, {
+import {
   SvgLineItem,
   SvgRectItem,
   SvgPolygonItem,
   SvgEllipseItem,
   SvgCircleItem,
-  SvgEmptyItem,
   SvgPlainItem,
   SvgTextItem,
   SvgImageItem,
 } from './SvgItem';
 import SvgPathItem from './SvgPathItem';
+import SvgGroupItem from './SvgGroupItem';
 
 import PinchZoomView from './PinchZoomView';
 
@@ -83,27 +83,6 @@ const styles = StyleSheet.create({
   },
 });
 
-class SvgGroupItem extends SvgItem {
-  renderContent() {
-    let svgson = this.props.info, children = svgson.get('children');
-
-    return children.map((child, index) => {
-      let name = child.get('name'), id = `${this.props.id}_${name}_${index}`;
-      let info = fromJS({ attributes: svgson.get('attributes') });
-      info = info.mergeDeep(child);
-
-      const ItemType = ITEM_MAPPING[name] || SvgEmptyItem;
-      return (
-        <ItemType
-          info={info} 
-          id={id}
-          disabled={true}
-          key={id} />
-      );
-    })
-  }
-}
-
 const ITEM_MAPPING = {
   path: SvgPathItem,
   rect: SvgRectItem,
@@ -127,6 +106,10 @@ class SvgEditor extends React.PureComponent {
     // TODO: Support multiple selected
     /** ID of selected element */
     selected: null,
+
+    /** ID of scoped element */
+    scope: null,
+
     historyPointer: -1,
     canvasSize: {
       width: 0,
@@ -170,10 +153,27 @@ class SvgEditor extends React.PureComponent {
 
     const { customMapping={} } = props;
 
-    this.elementMapping = {
-      ...ITEM_MAPPING,
-      ...customMapping,
-    };
+    this.elementMapping = {...ITEM_MAPPING, ...customMapping};
+  }
+
+  componentDidMount() {
+    this._init();
+  }
+
+  componentDidUpdate({svg: prevSvg}) {
+    const {svg} = this.props;
+
+    console.log('SvgEditor.componentDidUpdate');
+
+    // if prop svg changed, reinit
+    if (svg !== prevSvg) {
+      console.log('SvgEditor.componentDidUpdate: SVG Changed');
+      this._init();
+    }
+
+    if (this.props.onRender) {
+      this.props.onRender();
+    }
   }
 
   get hasChanges() {
@@ -376,7 +376,7 @@ class SvgEditor extends React.PureComponent {
   }
 
   _generateSVGComponents() {
-    const {selected, scale} = this.state;
+    const {selected, scale, scope} = this.state;
     const {options={}} = this.props;
     const {showSize=true} = options;
 
@@ -389,22 +389,27 @@ class SvgEditor extends React.PureComponent {
       return (
         <ItemType
           ref={this.itemRefs[id]}
+          
+          id={id}
+          key={id}
+
+          // locked
+          info={child}
+          // selected={selected === id}
+          selected={selected}
+          scope={scope}
+          /** elements in SvgEditor are all roots */
+          scale={scale}
+          showSize={showSize}
+          gradients={this.gradients}
+          itemMapping={this.elementMapping}
+
           onTap={this._onTap}
           onPanEnded={this._removeGuidelines}
           offsetPositionToGuideline={this._offsetPositionToGuideline}
           getFilters={this._getFilters}
-          gradients={this.gradients}
           setElementById={this.setElementById}
-
-          // locked
-          info={child}
-          selected={selected === id}
-          scale={scale}
-          showSize={showSize}
-
-          id={id}
-          key={id}
-        />
+          setScope={this.setScope} />
       );
     });
   }
@@ -477,26 +482,6 @@ class SvgEditor extends React.PureComponent {
     }
   };
 
-  componentDidMount() {
-    this._init();
-  }
-
-  componentDidUpdate({svg: prevSvg}) {
-    const {svg} = this.props;
-
-    console.log('SvgEditor.componentDidUpdate');
-
-    // if prop svg changed, reinit
-    if (svg !== prevSvg) {
-      console.log('SvgEditor.componentDidUpdate: SVG Changed');
-      this._init();
-    }
-
-    if (this.props.onRender) {
-      this.props.onRender();
-    }
-  }
-
   getSelectedElementRef() {
     const {selected} = this.state;
     if (!selected) return null;
@@ -516,6 +501,7 @@ class SvgEditor extends React.PureComponent {
 
     this.setState({
       selected: null,
+      scope: null,
       scale: preview ? 1 : 3,
       watermark,
     });
@@ -600,6 +586,10 @@ class SvgEditor extends React.PureComponent {
   scaleToFit() {
     this.pinchZoomViewRef.current.scaleToFit();
   }
+
+  setScope = id => {
+    this.setState({ scope: id });
+  };
 
   undo() {
     let {historyPointer} = this.state;
