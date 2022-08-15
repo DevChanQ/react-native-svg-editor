@@ -5,6 +5,8 @@ import { fromJS } from 'immutable';
 import SvgItem, { SvgEmptyItem, GroupScopeSeparator } from './SvgItem';
 import { valueOrDefault } from '../utils';
 
+const excludeAttributes = ["devjeff:width", "devjeff:height", "devjeff:x", "devjeff:y", "appX", "appY"];
+
 class SvgGroupItem extends SvgItem {
 
   itemRefs = {};
@@ -50,7 +52,14 @@ class SvgGroupItem extends SvgItem {
         attributes['appX'] = valueOrDefault(attributes['appX'], attributes['devjeff:x']);
         attributes['appY'] = valueOrDefault(attributes['appY'], attributes['devjeff:y']);
 
-        this._positionOffset = {x: attributes['devjeff:x'], y: attributes['devjeff:y']};
+        // let positionOffsetX = attributes['devjeff:x'] + (attributes['appX'] - attributes['devjeff:x']);
+        // let positionOffsetY = attributes['devjeff:y'] + (attributes['appY'] - attributes['devjeff:y']);
+        let positionOffsetX = attributes['devjeff:x'];
+        let positionOffsetY = attributes['devjeff:y'];
+
+        this._positionOffset = { x: positionOffsetX, y: positionOffsetY };
+        // this._positionOffset.x = attributes['devjeff:x'];
+        // this._positionOffset.y = attributes['devjeff:y'];
       }
     }
 
@@ -68,7 +77,7 @@ class SvgGroupItem extends SvgItem {
 
     let childPos = Object.keys(this.itemRefs).map(id => {
       const child = this.itemRefs[id];
-      let {x, y} = child.getPosition(), {width, height} = child.getSize();
+      let {x, y} = child.getAppPosition(), {width, height} = child.getSize();
       // x1, y1  x2, y2
       return [{x, y}, {x: x+width, y: y+height}]
     }).flat();
@@ -93,19 +102,20 @@ class SvgGroupItem extends SvgItem {
 
   renderContent() {
     let svgson = this.props.info, children = svgson.get('children');
+    let mergeAttributes = svgson.get("attributes");
+    mergeAttributes = mergeAttributes.filter((attr, key) => !excludeAttributes.includes(key))
     
     return children.map((child, index) => {
       let name = child.get('name'), id = `${this.props.id}${GroupScopeSeparator}${name}_${index}`;
-      // let info = fromJS({ attributes: svgson.get('attributes') });
+      // let info = fromJS({ attributes: mergeAttributes });
       // info = info.mergeDeep(child);
 
       const ItemType = this.ITEM_MAPPING[name] || SvgEmptyItem;
       return (
         <ItemType
           {...this.props}
-          itemMapping={this.props.itemMapping}
           positionOffset={this._positionOffset}
-          info={child} 
+          info={child}
           id={id}
           ref={el => this.itemRefs[id] = el}
           key={id} />

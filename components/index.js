@@ -180,6 +180,10 @@ class SvgEditor extends React.PureComponent {
     return this.history.length > 0;
   }
 
+  get currentScope() {
+    return this.state.scope;
+  }
+
   get selectedNodeId() {
     return this.state.selected;
   }
@@ -188,7 +192,7 @@ class SvgEditor extends React.PureComponent {
   get selectedNodeType() {
     const { selected } = this.state;
     if (selected) {
-      return this.itemRefs[selected]?.current?.type;
+      return this.itemRefs[selected]?.type;
     }
     return null;
   }
@@ -365,12 +369,12 @@ class SvgEditor extends React.PureComponent {
       }
     }
 
-    for (let child of children) {
-      let id = child.get('id');
-      if (id && !this.itemRefs[id]) {
-        this.itemRefs[id] = React.createRef(null);
-      }
-    }
+    // for (let child of children) {
+    //   let id = child.get('id');
+    //   if (id && !this.itemRefs[id]) {
+    //     this.itemRefs[id] = React.createRef(null);
+    //   }
+    // }
 
     return children;
   }
@@ -388,7 +392,7 @@ class SvgEditor extends React.PureComponent {
       const ItemType = this.elementMapping[name] || SvgPlainItem;
       return (
         <ItemType
-          ref={this.itemRefs[id]}
+          ref={el => this.itemRefs[id] = el}
           
           id={id}
           key={id}
@@ -422,9 +426,9 @@ class SvgEditor extends React.PureComponent {
 
     let nodes = Object.keys(this.itemRefs).filter(key => !(key == 'frame' || key == id))
       .map(key => {
-        if (this.itemRefs[key].current) {
-          const { x, y } = this.itemRefs[key].current.getAppPosition();
-          const { width, height } = this.itemRefs[key].current.getSize();
+        if (this.itemRefs[key]) {
+          const { x, y } = this.itemRefs[key].getAppPosition();
+          const { width, height } = this.itemRefs[key].getSize();
           return { x, y, width, height };
         } 
 
@@ -547,13 +551,13 @@ class SvgEditor extends React.PureComponent {
     let svgsons = [], gradients = [];
     for (let child of children) {
       let childId = child.get('id'), childName = child.get('name');
-      if (this.itemRefs[childId]?.current && !EXCLUDE_ELEMENTS.includes(childName)) {
+      if (this.itemRefs[childId] && !EXCLUDE_ELEMENTS.includes(childName)) {
         try {
-          let svgson = await Promise.resolve(this.itemRefs[childId].current.toSvgson(external));
+          let svgson = await Promise.resolve(this.itemRefs[childId].toSvgson(external));
           if (external) {
-            gradients = gradients.concat(this.itemRefs[childId].current.internalGradientSvgson);
+            gradients = gradients.concat(this.itemRefs[childId].internalGradientSvgson);
           } else {
-            gradients = gradients.concat(this.itemRefs[childId].current.gradientSvgson);
+            gradients = gradients.concat(this.itemRefs[childId].gradientSvgson);
           }
           svgsons.push(svgson);
         } catch (e) {
@@ -628,7 +632,7 @@ class SvgEditor extends React.PureComponent {
    * @returns {Promise} Promise that resolves once element is copied
    */
   copy(id) {
-    return Promise.resolve(this.itemRefs[id]?.current?.toSvgson(false)).then(obj => {
+    return Promise.resolve(this.itemRefs[id]?.toSvgson(false)).then(obj => {
       this.clipboard = obj;
     });
   }
@@ -715,7 +719,7 @@ class SvgEditor extends React.PureComponent {
   updateSelectedElementAttributes = payload => {
     const {selected} = this.state;
     if (selected) {
-      this.itemRefs[selected]?.current.updateAttributes(payload);
+      this.itemRefs[selected]?.updateAttributes(payload);
     }
   };
 

@@ -165,7 +165,7 @@ class SvgItem extends React.PureComponent {
   }
 
   get isTransparent() {
-    return !this.inScope && this.elementScopeLevel < this.scopeLevel && this.props.scope !== this.props.id;
+    return (!this.inScope && this.elementScopeLevel < this.scopeLevel) && this.props.scope !== this.props.id;
   }
 
   get isGradientFill() {
@@ -320,10 +320,9 @@ class SvgItem extends React.PureComponent {
     return info;
   }
 
-  refreshValues(initial=false) {
+  refreshValues() {
     this._stateRefreshed = true;
     this._lastAttributes = this._getAttributesFromProps();
-    this._initialAttributes = { ...this._lastAttributes };
     this.setState({attributes: { ...this._lastAttributes }});
   }
 
@@ -365,7 +364,8 @@ class SvgItem extends React.PureComponent {
         if (command === 'rotate') {
           attributes['devjeff:rotate'] = parseFloat(values[0]);
         } else if (command === 'translate') {
-          
+          attributes['devjeff:translateX'] = valueOrDefault(parseFloat(values[0]), 0);
+          attributes['devjeff:translateY'] = valueOrDefault(parseFloat(values[1]), 0);
         } else if (command === 'scale') {
           attributes['devjeff:scaleX'] = valueOrDefault(parseFloat(values[0]), 1);
           attributes['devjeff:scaleY'] = valueOrDefault(parseFloat(values[1]), 1);
@@ -746,8 +746,9 @@ class SvgItem extends React.PureComponent {
    */
   getAppPosition() {
     const {attributes: {appX=0, appY=0}} = this.state, {positionOffset} = this.props;
+    const translateX = this.state.attributes['devjeff:translateX'] || 0, translateY = this.state.attributes['devjeff:translateY'] || 0;
     // console.log(positionOffset)
-    return {x: appX-positionOffset.x, y: appY-positionOffset.y}
+    return {x: appX+translateX-positionOffset.x, y: appY+translateY-positionOffset.y}
   }
 
   getParentViewBox() {
@@ -878,7 +879,7 @@ class SvgItem extends React.PureComponent {
       return <View />
     }
 
-    let {positionOffset} = this.props,{width, height} = this.getSize(), {x, y} = this.getAppPosition();
+    let {positionOffset} = this.props, {width, height} = this.getSize(), {x, y} = this.getAppPosition();
     let {rotate, scaleX, scaleY, skewX, skewY} = this.transformAttributes;
     let left = x, top = y;
 
@@ -903,7 +904,7 @@ class SvgItem extends React.PureComponent {
       <View style={{
         position: 'absolute',
         width, height, left, top,
-        opacity: this.isTransparent ? 0.2 : 1,
+        opacity: this.isTransparent ? 0.5 : 1,
         transform: [
           {skewX: `${skewX}deg`},
           {skewY: `${skewY}deg`},
@@ -915,36 +916,36 @@ class SvgItem extends React.PureComponent {
           {translateY: height/2},
         ]
       }}>
-      <TapGestureHandler
-        ref={this._doubleTapRef}
-        enabled={!this.locked && !this.disabled}
-        onHandlerStateChange={this._onDoubleTap}
-        numberOfTaps={2}>
-        <PanGestureHandler
-          enabled={!this.disabled}
-          minPointers={1}
-          maxPointers={1}
-          onGestureEvent={this.onPan}
-          onHandlerStateChange={this.onPanStateChanged}>
-          <View style={{
-            width: '100%', height: '100%',
-            transform: [{scaleX}, {scaleY},],
-          }}>
+        <TapGestureHandler
+          ref={this._doubleTapRef}
+          enabled={!this.locked && !this.disabled}
+          onHandlerStateChange={this._onDoubleTap}
+          numberOfTaps={2}>
+          <PanGestureHandler
+            enabled={!this.disabled}
+            minPointers={1}
+            maxPointers={1}
+            onGestureEvent={this.onPan}
+            onHandlerStateChange={this.onPanStateChanged}>
+            <View style={{
+              width: '100%', height: '100%',
+              transform: [{scaleX}, {scaleY},],
+            }}>
 
-            {this.renderContent()}
+              {this.renderContent()}
 
-            <Portal hostName="controlLayerPortal">
-              <View pointerEvents='box-none' style={{
-                position: 'absolute',
-                width, height, left: left + positionOffset.x, top: top + positionOffset.y
-              }}>
-                { this.selected ? this.renderControlLayer() : null }
-              </View>
-            </Portal>
+              <Portal hostName="controlLayerPortal">
+                <View pointerEvents='box-none' style={{
+                  position: 'absolute',
+                  width, height, left: left + positionOffset.x, top: top + positionOffset.y
+                }}>
+                  { this.selected ? this.renderControlLayer() : null }
+                </View>
+              </Portal>
 
-          </View>
-        </PanGestureHandler>
-      </TapGestureHandler>
+            </View>
+          </PanGestureHandler>
+        </TapGestureHandler>
       </View>
     );
   }

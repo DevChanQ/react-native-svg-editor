@@ -70,11 +70,11 @@ const Controller = ({
   const defaultValue = control['default'];
   const elementRef = canvasRef.current?.getSelectedElementRef();
 
-  const value = valueOrDefault(elementRef?.current?.lastAttributes[control.prop], defaultValue);
+  const value = valueOrDefault(elementRef?.lastAttributes[control.prop], defaultValue);
   let lastValueX = null, lastValueY = null;
   if (control.type === 'slider') {
-    lastValueX = valueOrDefault(elementRef?.current?.lastAttributes[control.prop[0]], defaultValue[0]);
-    lastValueY = valueOrDefault(elementRef?.current?.lastAttributes[control.prop[1]], defaultValue[1]);
+    lastValueX = valueOrDefault(elementRef?.lastAttributes[control.prop[0]], defaultValue[0]);
+    lastValueY = valueOrDefault(elementRef?.lastAttributes[control.prop[1]], defaultValue[1]);
   }
 
   const initialValue = control.type === 'slider' ? `${lastValueX || ''} ${lastValueY}` : value;
