@@ -6,7 +6,7 @@ import ReactNativeHapticFeedback from "react-native-haptic-feedback";
 import { mergeDeep } from 'react-native-svg-editor/utils/immutable';
 import { PortalProvider, PortalHost } from '@gorhom/portal';
 import { parse as svgsonParse, stringify } from 'svgson';
-import Immutable, { fromJS } from 'immutable';
+import { fromJS } from 'immutable';
 
 import {
   SvgLineItem,
@@ -17,6 +17,8 @@ import {
   SvgPlainItem,
   SvgTextItem,
   SvgImageItem,
+
+  GroupScopeSeparator
 } from './SvgItem';
 import SvgPathItem from './SvgPathItem';
 import SvgGroupItem from './SvgGroupItem';
@@ -261,6 +263,17 @@ class SvgEditor extends React.PureComponent {
 
     // filter out excluded elements
     svgson.children = svgson.children.filter(child => !exclude.includes(child.name));
+    // set ids of children
+    const setIdDeep = (c, parent=null) => {
+      c.id = parent ? `${parent.id}${GroupScopeSeparator}${makeid(6)}` : makeid(6);
+      if (c.children && c.children.length > 0) {
+        for (let d of c.children) setIdDeep(d, c);
+      }
+    };
+
+    for (let child of svgson.children) {
+      setIdDeep(child);
+    }
 
     return svgson;
   }
@@ -278,7 +291,7 @@ class SvgEditor extends React.PureComponent {
     const {svg} = this.props;
     if (svg) {
       this._parseSvg(svg).then(svgson => {
-        this.svgson = svgson;
+        this.svgson = fromJS(svgson);
 
         let {children, attributes: {viewBox="0 0 0 0", width, height}} = svgson;
         const [x, y, viewBoxWidth, viewBoxHeight] = viewBox.split(" ");
@@ -315,25 +328,36 @@ class SvgEditor extends React.PureComponent {
   }
 
   /**
-   * Get list of Children after applying action history
-   * @returns {Array<Immutable.Map>} Array of svgson object as ImmutableJs Maps
+   * Get latest svgson after applying action history
+   * @returns {Object} svgson js object after applying histories
    */
-  _getChildrenAndApplyHistory() {
+   _getLatestSvgson() {
     const {historyPointer} = this.state;
     const histories = this.history.slice(0, historyPointer);
 
-    let children = this.baseChildren.toArray();
+    const svgson = this.svgson.toJS();
 
     // TODO: implement history type with more than one action
     for (let history of histories) {
       let {type, target=null, payload} = history;
-      let targetIndex = children.findIndex(child => child.get('id') === target);
+
+      let targetSplitted = target.split(GroupScopeSeparator), children = svgson.children;
+      // remove child id
+      targetSplitted.pop();
+      if (targetSplitted.length > 0) {
+        for (let split of targetSplitted) {
+          children = children.find(child => child.id === split)?.children || [];
+        }
+      }
+      
+      let targetIndex = children.findIndex(child => child.id === target);
       if (target && targetIndex < 0) continue// throw new Error('Target not found');
 
       const performAction = (t) => {
         switch (t) {
           case 'set':
-            children[targetIndex] = mergeDeep(children[targetIndex], payload);
+            /** merge */
+            children[targetIndex] = mergeDeep(fromJS(children[targetIndex]), payload).toJS();
             break;
           case 'add':
             children.push(fromJS(payload));
@@ -376,7 +400,7 @@ class SvgEditor extends React.PureComponent {
     //   }
     // }
 
-    return children;
+    return svgson;
   }
 
   _generateSVGComponents() {
@@ -384,38 +408,28 @@ class SvgEditor extends React.PureComponent {
     const {options={}} = this.props;
     const {showSize=true} = options;
 
-    let children = this._getChildrenAndApplyHistory();
+    const svgson = this._getLatestSvgson();
 
-    return children.map(child => {
-      let name = child.get('name'), id = child.get('id');
-
-      const ItemType = this.elementMapping[name] || SvgPlainItem;
-      return (
-        <ItemType
-          ref={el => this.itemRefs[id] = el}
-          
-          id={id}
-          key={id}
-
-          // locked
-          info={child}
-          // selected={selected === id}
-          selected={selected}
-          scope={scope}
-          /** elements in SvgEditor are all roots */
-          scale={scale}
-          showSize={showSize}
-          gradients={this.gradients}
-          itemMapping={this.elementMapping}
-
-          onTap={this._onTap}
-          onPanEnded={this._removeGuidelines}
-          offsetPositionToGuideline={this._offsetPositionToGuideline}
-          getFilters={this._getFilters}
-          setElementById={this.setElementById}
-          setScope={this.setScope} />
-      );
-    });
+    return (
+      <SvgGroupItem
+        info={fromJS(svgson)}
+        selected={selected}
+        id="root"
+        scope={scope}
+        /** elements in SvgEditor are all roots */
+        scale={scale}
+        showSize={showSize}
+        gradients={this.gradients}
+        itemMapping={this.elementMapping}
+        
+        onTap={this._onTap}
+        onPanEnded={this._removeGuidelines}
+        offsetPositionToGuideline={this._offsetPositionToGuideline}
+        getFilters={this._getFilters}
+        setElementById={this.setElementById}
+        setScope={this.setScope}
+        setCanvasItemRef={this.setItemRef} />
+    );
   }
 
   _offsetPositionToGuideline = (rect, id) => {
@@ -540,7 +554,7 @@ class SvgEditor extends React.PureComponent {
    * @returns {Promise} Promise that resolves to the xml string of the exported svg
    */
   async exportSvg(external=false) {
-    let children = this._getChildrenAndApplyHistory();
+    let svgson = this._getLatestSvgson(), children = svgson.children;
 
     // TODO: Find a better way to determine viewBox of the svg
     let {width=0, height=0} = this.state.canvasSize;
@@ -550,7 +564,7 @@ class SvgEditor extends React.PureComponent {
     const EXCLUDE_ELEMENTS = ['title', 'defs', 'style', 'metadata', 'desc']
     let svgsons = [], gradients = [];
     for (let child of children) {
-      let childId = child.get('id'), childName = child.get('name');
+      let childId = child.id, childName = child.name;
       if (this.itemRefs[childId] && !EXCLUDE_ELEMENTS.includes(childName)) {
         try {
           let svgson = await Promise.resolve(this.itemRefs[childId].toSvgson(external));
@@ -694,6 +708,10 @@ class SvgEditor extends React.PureComponent {
     }
   }
 
+  setItemRef = (ref, id) => {
+    this.itemRefs[id] = ref;
+  };
+
   setElementById = (target, payload) => {
     this.push({ type: 'set', target, payload });
   };
@@ -759,6 +777,8 @@ class SvgEditor extends React.PureComponent {
   }
 
   render() {
+    if (!this.svgson) return null;
+
     const svgs = this._generateSVGComponents();
     const {containerStyle={}, watermarkStyle={}, pinchZoomViewProps={}} = this.props;
     const {canvasSize, watermark} = this.state;

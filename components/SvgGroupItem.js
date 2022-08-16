@@ -1,6 +1,5 @@
 import React from 'react';
-import {View} from 'react-native';
-import { fromJS } from 'immutable';
+import { PortalProvider, PortalHost } from '@gorhom/portal';
 
 import SvgItem, { SvgEmptyItem, GroupScopeSeparator } from './SvgItem';
 import { valueOrDefault } from '../utils';
@@ -101,12 +100,13 @@ class SvgGroupItem extends SvgItem {
   }
 
   renderContent() {
-    let svgson = this.props.info, children = svgson.get('children');
+    let {info: svgson, setCanvasItemRef} = this.props, children = svgson.get('children');
     let mergeAttributes = svgson.get("attributes");
     mergeAttributes = mergeAttributes.filter((attr, key) => !excludeAttributes.includes(key))
     
-    return children.map((child, index) => {
-      let name = child.get('name'), id = `${this.props.id}${GroupScopeSeparator}${name}_${index}`;
+    return children.map(child => {
+      let name = child.get('name'), id = child.get('id');
+      // console.log('SvgGroupItem.renderContent: ', id);
       // let info = fromJS({ attributes: mergeAttributes });
       // info = info.mergeDeep(child);
 
@@ -117,8 +117,11 @@ class SvgGroupItem extends SvgItem {
           positionOffset={this._positionOffset}
           info={child}
           id={id}
-          ref={el => this.itemRefs[id] = el}
-          key={id} />
+          key={id}
+          ref={el => {
+            this.itemRefs[id] = el;
+            setCanvasItemRef(el, id);
+          }} />
       );
     })
   }

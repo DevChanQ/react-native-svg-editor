@@ -130,23 +130,29 @@ class SvgItem extends React.PureComponent {
     return this.props.info?.get('name');
   }
 
-  /** Getter of scope level in integer number. Root level == 1 */
+  /** Getter of scope level in integer number. Root level == 0 */
   get scopeLevel() {
-    if (this.props.scope === null) return 0;
+    if (this.props.scope === null) return 1;
 
     const splitted = this.props.scope.split(GroupScopeSeparator);
-    return splitted.length;
+    return splitted.length + 1;
   }
 
-  /** Getter of this element's scope level in integer number. Root level == 1 */
+  /** Getter of this element's scope level in integer number. Root level == 0 */
   get elementScopeLevel() {
+    if (this.props.id === 'root') return 0;
+
     const splitted = this.props.id.split(GroupScopeSeparator);
-    return splitted.length - 1;
+    return splitted.length;
   }
 
   // boolean flag getters
   get translateEnabled() {
     return !this.locked && this.selected && !this.isEditingGradient;
+  }
+
+  get isRoot() {
+    return this.props.id === 'root';
   }
   
   get isFrame() {
@@ -154,18 +160,12 @@ class SvgItem extends React.PureComponent {
   }
 
   get inScope() {
-    const scope = this.props.scope;
-    const splitted = this.props.id.split(GroupScopeSeparator);
-
-    // root scope
-    if (scope === null) return splitted.length === 1;
-
-    splitted.pop();
-    return splitted.join(GroupScopeSeparator) === scope;
+    return this.elementScopeLevel === this.scopeLevel;
   }
 
   get isTransparent() {
-    return (!this.inScope && this.elementScopeLevel < this.scopeLevel) && this.props.scope !== this.props.id;
+    return false;
+    // return (!this.inScope && this.elementScopeLevel < this.scopeLevel) && this.props.scope !== this.props.id;
   }
 
   get isGradientFill() {
@@ -581,6 +581,7 @@ class SvgItem extends React.PureComponent {
   };
 
   onPanStateChanged = ({nativeEvent: {oldState, state}}) => {
+    console.log(`SvgItem.onPanStateChanged (${this.props.id})`)
     if (state === State.BEGAN) {
       this._onSingleTap();
 
