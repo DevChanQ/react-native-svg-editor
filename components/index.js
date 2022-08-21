@@ -18,7 +18,8 @@ import {
   SvgTextItem,
   SvgImageItem,
 
-  GroupScopeSeparator
+  GroupScopeSeparator,
+  ROOT_ELEMENT_ID
 } from './SvgItem';
 import SvgPathItem from './SvgPathItem';
 import SvgGroupItem from './SvgGroupItem';
@@ -414,7 +415,7 @@ class SvgEditor extends React.PureComponent {
       <SvgGroupItem
         info={fromJS(svgson)}
         selected={selected}
-        id="root"
+        id={ROOT_ELEMENT_ID}
         scope={scope}
         /** elements in SvgEditor are all roots */
         scale={scale}
@@ -801,7 +802,6 @@ class SvgEditor extends React.PureComponent {
               <View style={{width, height}}></View>
               <View onLayout={this._onEditorLayout} style={styles.svgs}>
                 {svgs}
-                <PortalHost name="controlLayerPortal" />
               </View>
               {
                 watermark ?
