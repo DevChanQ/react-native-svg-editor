@@ -1,6 +1,7 @@
-import { ADD_FONT, SET_PREMIUM } from "./actions";
+import { ADD_FONT, SET_PREMIUM, SET_VERSION } from "./actions";
 
 const DEFAULT_INITIAL_STATE = {
+  version: null,
   fonts: [],
 
   premium: false,
@@ -15,7 +16,7 @@ const extendSVGEditorReducer = (initialState={}, reducer) => {
   };
 
   return (state = DEFAULT_STATE, action = {}) => {
-    const {type, fonts, premium} = action;
+    const {type, fonts, premium, version} = action;
 
     switch (type) {
       case ADD_FONT: {
@@ -32,6 +33,9 @@ const extendSVGEditorReducer = (initialState={}, reducer) => {
           ...state,
           premium: !!premium,
         }
+      }
+      case SET_VERSION: {
+        return { ...state, version }
       }
       default:
         break;
