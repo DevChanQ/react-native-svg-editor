@@ -80,7 +80,7 @@ class SvgGroupItem extends SvgItem {
   getChildrenCoors() {
     if (!(this.itemRefs && Object.keys(this.itemRefs).length > 0)) return null;
 
-    let childPos = Object.keys(this.itemRefs).map(id => {
+    let childPos = Object.keys(this.itemRefs).filter(id => this.itemRefs[id]).map(id => {
       const child = this.itemRefs[id];
       let {x, y} = child.getAbsoluteAppPosition(), {width, height} = child.getSize();
       // x1, y1  x2, y2
