@@ -903,58 +903,64 @@ class SvgItem extends React.PureComponent {
       left = 0; top = 0;
     }
 
+    if (Number.isNaN(resizeBoxX) || Number.isNaN(resizeBoxY)) {
+      console.warn("getAbsoluteAppPosition returned size object with NaN, setting x and y to 0 to avoid react native error");
+      console.warn(`Please investigate problem`, `id - ${this.props.id}`, this.getAbsoluteAppPosition());
+      resizeBoxX = 0; resizeBoxYr = 0;
+    }
+
     width = PixelRatio.roundToNearestPixel(width), height = PixelRatio.roundToNearestPixel(height);
     left = PixelRatio.roundToNearestPixel(left), top = PixelRatio.roundToNearestPixel(top);
 
     this._calculateInternalScale();
 
     return (
-        <View style={{
-          position: 'absolute',
-          width, height, left, top,
-          opacity: this.isTransparent ? 0.5 : 1,
-          transform: [
-            {skewX: `${skewX}deg`},
-            {skewY: `${skewY}deg`},
+      <View style={{
+        position: 'absolute',
+        width, height, left, top,
+        opacity: this.isTransparent ? 0.5 : 1,
+        transform: [
+          {skewX: `${skewX}deg`},
+          {skewY: `${skewY}deg`},
 
-            {translateX: -width/2},
-            {translateY: -height/2},
-            {rotate: `${rotate}deg`},
-            {translateX: width/2},
-            {translateY: height/2},
-          ]
-        }}>
-          <TapGestureHandler
-            ref={this._doubleTapRef}
-            enabled={!this.locked && !this.disabled}
-            onHandlerStateChange={this._onDoubleTap}
-            numberOfTaps={2}>
-            <PanGestureHandler
-              enabled={!this.disabled}
-              minPointers={1}
-              maxPointers={1}
-              onGestureEvent={this.onPan}
-              onHandlerStateChange={this.onPanStateChanged}>
-              <View style={{
-                width: '100%', height: '100%',
-                transform: [{scaleX}, {scaleY},],
-              }}>
-
-                {this.renderContent()}
-
-              </View>
-            </PanGestureHandler>
-          </TapGestureHandler>
-
-          <Portal hostName="controlLayerPortal">
-            <View pointerEvents='box-none' style={{
-              position: 'absolute',
-              width, height, left: resizeBoxX, top: resizeBoxY
+          {translateX: -width/2},
+          {translateY: -height/2},
+          {rotate: `${rotate}deg`},
+          {translateX: width/2},
+          {translateY: height/2},
+        ]
+      }}>
+        <TapGestureHandler
+          ref={this._doubleTapRef}
+          enabled={!this.locked && !this.disabled}
+          onHandlerStateChange={this._onDoubleTap}
+          numberOfTaps={2}>
+          <PanGestureHandler
+            enabled={!this.disabled}
+            minPointers={1}
+            maxPointers={1}
+            onGestureEvent={this.onPan}
+            onHandlerStateChange={this.onPanStateChanged}>
+            <View style={{
+              width: '100%', height: '100%',
+              transform: [{scaleX}, {scaleY},],
             }}>
-              { this.selected ? this.renderControlLayer() : null }
+
+              {this.renderContent()}
+
             </View>
-          </Portal>
-        </View>
+          </PanGestureHandler>
+        </TapGestureHandler>
+
+        <Portal hostName="controlLayerPortal">
+          <View pointerEvents='box-none' style={{
+            position: 'absolute',
+            width, height, left: resizeBoxX, top: resizeBoxY
+          }}>
+            { this.selected ? this.renderControlLayer() : null }
+          </View>
+        </Portal>
+      </View>
     );
   }
 }

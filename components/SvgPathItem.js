@@ -53,6 +53,7 @@ class SvgPathItem extends SvgItem {
   
   _lastKX = 1;
   _lastKY = 1;
+  _malformedPath = false;
 
   get translateEnabled() {
     return !this.state.editMode && super.translateEnabled;
@@ -69,13 +70,11 @@ class SvgPathItem extends SvgItem {
   constructor(props) {
     super(props);
 
-    this.parsedPath = new Svg(this._lastAttributes['d']);
-    this._startPoint = null;
+    this._refreshParsedPath();
   }
 
   onValueRefreshed = (changed) => {
-    this.parsedPath = new Svg(this._lastAttributes['d']);
-    this._startPoint = null;
+    this._refreshParsedPath();
     this._lastKX = 1;
     this._lastKY = 1;
   }
@@ -108,6 +107,15 @@ class SvgPathItem extends SvgItem {
     delete attributes['height'];
 
     return info;
+  }
+
+  _refreshParsedPath() {
+    try {
+      this.parsedPath = new Svg(this._lastAttributes['d']);
+    } catch (e) {
+      this._malformedPath = true;
+    }
+    this._startPoint = null;
   }
 
   updateTargetPoint = (point, {x, y}) => {
@@ -279,6 +287,11 @@ class SvgPathItem extends SvgItem {
     )
   }
 
+  render() {
+    if (this._malformedPath) return null;
+    
+    return super.render();
+  }
 }
 
 export default SvgPathItem;

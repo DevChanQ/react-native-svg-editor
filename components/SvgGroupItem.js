@@ -80,12 +80,14 @@ class SvgGroupItem extends SvgItem {
   getChildrenCoors() {
     if (!(this.itemRefs && Object.keys(this.itemRefs).length > 0)) return null;
 
-    let childPos = Object.keys(this.itemRefs).filter(id => this.itemRefs[id]).map(id => {
+    let childPos = Object.keys(this.itemRefs).map(id => {
       const child = this.itemRefs[id];
+      if (!child) return null;
       let {x, y} = child.getAbsoluteAppPosition(), {width, height} = child.getSize();
+      if (typeof x !== 'number' || typeof y !== 'number' || typeof width !== 'number' || typeof height !== 'number') return null;
       // x1, y1  x2, y2
       return [{x, y}, {x: x+width, y: y+height}]
-    }).flat();
+    }).flat().filter(coor => coor);
 
     let xCoor = childPos.map(coor => coor.x), yCoor = childPos.map(coor => coor.y);
     let minX = Math.min(...xCoor), maxX = Math.max(...xCoor), minY = Math.min(...yCoor), maxY = Math.max(...yCoor);
@@ -116,8 +118,7 @@ class SvgGroupItem extends SvgItem {
     let mergeAttributes = svgson.get("attributes");
     mergeAttributes = mergeAttributes.filter((attr, key) => !excludeAttributes.includes(key))
 
-
-    console.log(`SvgGroupItem.renderContent: (${this.props.id})`, this._absoluteOffset);
+    // console.log(`SvgGroupItem.renderContent: (${this.props.id})`, this._absoluteOffset);
     
     children = children.map(child => {
       let name = child.get('name'), id = child.get('id');
