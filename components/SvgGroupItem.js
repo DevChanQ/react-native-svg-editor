@@ -36,7 +36,8 @@ class SvgGroupItem extends SvgItem {
   _initAttributes(a) {
     let attributes = super._initAttributes(a);
 
-    if (this._shouldRefreshRect) {
+    // initialize app position if undefined
+    if (attributes['appX'] === undefined || attributes['appY'] === undefined || this._shouldRefreshRect) {
       let coors = this.getChildrenCoors();
       if (coors) {
         // refresh rect attributes
@@ -49,10 +50,7 @@ class SvgGroupItem extends SvgItem {
         attributes['appY'] = valueOrDefault(attributes['appY'], minY);
 
         this._relativeOffset = { x: minX, y: minY };
-
-        if (!this._initialPosition) {
-          this._initialPosition = { x: minX, y: minY };
-        }
+        this._initialPosition = { x: minX, y: minY };
       }
 
       this._shouldRefreshRect = false;

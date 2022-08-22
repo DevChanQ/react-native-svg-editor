@@ -66,14 +66,16 @@ class SvgPathItem extends SvgItem {
     return {x: left, y: top};
   }
 
-  onValueRefreshed = (changed) => {
+  constructor(props) {
+    super(props);
+
     this.parsedPath = new Svg(this._lastAttributes['d']);
     this._startPoint = null;
   }
 
-  refreshValues() {
-    super.refreshValues();
-
+  onValueRefreshed = (changed) => {
+    this.parsedPath = new Svg(this._lastAttributes['d']);
+    this._startPoint = null;
     this._lastKX = 1;
     this._lastKY = 1;
   }

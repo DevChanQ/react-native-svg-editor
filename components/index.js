@@ -342,17 +342,20 @@ class SvgEditor extends React.PureComponent {
     for (let history of histories) {
       let {type, target=null, payload} = history;
 
-      let targetSplitted = target.split(GroupScopeSeparator), children = svgson.children;
-      // remove child id
-      targetSplitted.pop();
-      if (targetSplitted.length > 0) {
-        for (let split of targetSplitted) {
-          children = children.find(child => child.id === split)?.children || [];
+      let targetIndex = 0, children = svgson.children;
+      if (target) {
+        let targetSplitted = target.split(GroupScopeSeparator);
+        // remove child id
+        targetSplitted.pop();
+        if (targetSplitted.length > 0) {
+          for (let split of targetSplitted) {
+            children = children.find(child => child.id === split)?.children || [];
+          }
         }
+        
+        targetIndex = children.findIndex(child => child.id === target);
+        if (targetIndex < 0) continue// throw new Error('Target not found');
       }
-      
-      let targetIndex = children.findIndex(child => child.id === target);
-      if (target && targetIndex < 0) continue// throw new Error('Target not found');
 
       const performAction = (t) => {
         switch (t) {
@@ -361,7 +364,7 @@ class SvgEditor extends React.PureComponent {
             children[targetIndex] = mergeDeep(fromJS(children[targetIndex]), payload).toJS();
             break;
           case 'add':
-            children.push(fromJS(payload));
+            children.push(payload);
             break;
           case 'remove':
             children.splice(targetIndex, 1);

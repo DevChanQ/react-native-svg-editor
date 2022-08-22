@@ -891,8 +891,6 @@ class SvgItem extends React.PureComponent {
     let {rotate, scaleX, scaleY, skewX, skewY} = this.transformAttributes;
     let left = relativeX, top = relativeY;
 
-    console.log(`SvgItem.render: (${this.props.id}) width: ${width} height: ${height}`)
-
     if (Number.isNaN(width) || Number.isNaN(height)) {
       console.warn("getSize returned size object with NaN, setting width and height to 0 to avoid react native error");
       console.warn(`Please investigate problem`, `id - ${this.props.id}`, this.getSize());
