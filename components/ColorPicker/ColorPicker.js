@@ -11,8 +11,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#000000AB',
   },
   container: {
-    margin: 24,
+    margin: 30,
     padding: 24,
+    paddingHorizontal: 16,
     backgroundColor: 'white',
     borderRadius: 12,
     flex: 1,
@@ -32,8 +33,7 @@ const styles = StyleSheet.create({
   },
   hexInput: {
     flex: 1,
-    fontSize: 19,
-    marginHorizontal: 8,
+    fontSize: 22,
     padding: 6,
     textAlign: 'center',
   }
