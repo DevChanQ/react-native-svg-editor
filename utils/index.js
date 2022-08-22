@@ -34,3 +34,5 @@ export const mergeDeep = (target, ...sources) => {
 };
 
 export const valueOrDefault = (prop, def) => prop === undefined ? def : prop;
+
+export const isColorHex = hex => /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(hex);

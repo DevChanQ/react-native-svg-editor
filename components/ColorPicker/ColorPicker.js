@@ -1,7 +1,9 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { View, StyleSheet, Button, SafeAreaView, TextInput } from 'react-native';
+import { View, StyleSheet, Button, SafeAreaView, TextInput, TouchableOpacity, Text } from 'react-native';
 import ColorPickerComponent from 'react-native-wheel-color-picker';
 import { Navigation } from 'react-native-navigation';
+
+import { isColorHex } from '../../utils';
 
 const styles = StyleSheet.create({
   root: {
@@ -16,38 +18,67 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   buttonContainer: {
+    paddingTop: 40,
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   button: {
-    flex: 1,
+    padding: 12,
+    paddingVertical: 6,
   },
-  colorPicker: {
-    marginBottom: 32,
+  buttonText: {
+    fontSize: 15,
   },
   hexInput: {
-    fontSize: 16,
+    flex: 1,
+    fontSize: 19,
+    marginHorizontal: 8,
     padding: 6,
-    borderRadius: 6,
-    borderWidth: 1,
     textAlign: 'center',
   }
 });
 
 export const COMPONENT_NAME = 'memeish.ColorPicker';
 
+class ColorPickerHexInput extends React.PureComponent {
+  state = {
+    hex: "#ffffff",
+  };
+
+  _onChangeText = hex => {
+    if (isColorHex(hex)) {
+      this.props.setCurrentColor(hex);
+    }
+  }
+
+  updateHex(hex) {
+    this.setState({ hex });
+  }
+
+  render() {
+    const {hex} = this.state;
+    return (
+      <TextInput
+        style={styles.hexInput}
+        defaultValue={hex}
+        onChangeText={this._onChangeText} />
+    );
+  }
+}
+
 const ColorPicker = ({ componentId, initialColor="#ffffff", onConfirm=() => {} }) => {
+  const hexInput = useRef(null);
   const [currentColor, setCurrentColor] = useState(initialColor);
-  const color = useRef(null);
   const onColorChange = useCallback(c => {
-    setCurrentColor(c);
-  }, []);
-  const onColorChangeComplete = useCallback(c => {
-    color.current = c;
+    hexInput.current.updateHex(c);
   }, []);
   const onConfirmButtonTapped = useCallback(() => {
-    onConfirm(color.current);
-    Navigation.dismissOverlay(componentId);
-  }, [onConfirm]);
+    if (isColorHex(currentColor)) {
+      onConfirm(currentColor);
+      Navigation.dismissOverlay(componentId);
+    }
+  }, [onConfirm, currentColor]);
   const onCancelButtonTapped = useCallback(() => {
     Navigation.dismissOverlay(componentId);
   }, []);
@@ -57,25 +88,22 @@ const ColorPicker = ({ componentId, initialColor="#ffffff", onConfirm=() => {} }
       <View style={styles.container}>
         <ColorPickerComponent
           style={styles.colorPicker}
-          color={initialColor}
+          color={currentColor}
           thumbSize={40}
           swatches={false}
-          onColorChange={onColorChange}
-          onColorChangeComplete={onColorChangeComplete} />
-        <View style={{ paddingBottom: 24 }}>
-          <TextInput style={styles.hexInput} value={currentColor} />
-        </View>
+          onColorChange={onColorChange} />
         <View style={styles.buttonContainer}>
-          <View style={[styles.button, {marginRight: 12,}]}>
-            <Button
-              onPress={onCancelButtonTapped}
-              title='Cancel' />
-          </View>
-          <View style={styles.button}>
-            <Button
-              onPress={onConfirmButtonTapped}
-              title='Confirm' />
-          </View>
+          <TouchableOpacity onPress={onCancelButtonTapped}>
+            <View style={styles.button}><Text style={[styles.buttonText, {color: '#bababa'}]}>Cancel</Text></View>
+          </TouchableOpacity>
+          
+          <ColorPickerHexInput
+            ref={hexInput}
+            setCurrentColor={setCurrentColor} />
+            
+          <TouchableOpacity onPress={onConfirmButtonTapped}>
+            <View style={styles.button}><Text style={[styles.buttonText, {color: '#1f93ff'}]}>Confirm</Text></View>
+          </TouchableOpacity>
         </View>
       </View>
     </SafeAreaView>
