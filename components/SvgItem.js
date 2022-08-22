@@ -15,7 +15,7 @@ import Svg, { SvgXml, SvgCss, Path } from "react-native-svg";
 import { State, PanGestureHandler, PinchGestureHandler, TapGestureHandler } from 'react-native-gesture-handler';
 import RNFS from 'react-native-fs';
 import { stringify } from "svgson";
-import { Portal, PortalHost } from '@gorhom/portal';
+import { Portal } from '@gorhom/portal';
 import { fromJS } from 'immutable';
 
 import cssParser from '../utils/css';
@@ -743,19 +743,19 @@ class SvgItem extends React.PureComponent {
   }
 
   /**
-   * Returns app position used for rendering
+   * Returns relative app position used for rendering (position relative to parent)
    * @returns {Point} App position Point object
    */
-  getAppPosition() {
-    const {attributes: {appX=0, appY=0}} = this.state, {positionOffset} = this.props;
+  getRelativeAppPosition() {
+    const {attributes: {appX=0, appY=0}} = this.state, {relativeOffset} = this.props;
     const translateX = this.state.attributes['devjeff:translateX'] || 0, translateY = this.state.attributes['devjeff:translateY'] || 0;
-    // console.log(positionOffset)
-    return {x: appX+translateX-positionOffset.x, y: appY+translateY-positionOffset.y}
+    return {x: appX+translateX-relativeOffset.x, y: appY+translateY-relativeOffset.y}
   }
 
-  getUnoffsetAppPosition() {
-    const {attributes: {appX=0, appY=0}} = this.state;
-    return {x: appX, y: appY}
+  getAbsoluteAppPosition() {
+    const {attributes: {appX=0, appY=0}} = this.state, {absoluteOffset} = this.props;
+    const translateX = this.state.attributes['devjeff:translateX'] || 0, translateY = this.state.attributes['devjeff:translateY'] || 0;
+    return {x: appX+translateX-absoluteOffset.x, y: appY+translateY-absoluteOffset.y}
   }
 
   getParentViewBox() {
@@ -886,10 +886,12 @@ class SvgItem extends React.PureComponent {
       return <View />
     }
 
-    let {positionOffset} = this.props, {width, height} = this.getSize();
-    let {x, y} = this.getAppPosition(), {x: resizeBoxX, y: resizeBoxY} = this.getUnoffsetAppPosition();
+    let {width, height} = this.getSize();
+    let {x: relativeX, y: relativeY} = this.getRelativeAppPosition(), {x: resizeBoxX, y: resizeBoxY} = this.getAbsoluteAppPosition();
     let {rotate, scaleX, scaleY, skewX, skewY} = this.transformAttributes;
-    let left = x, top = y;
+    let left = relativeX, top = relativeY;
+
+    console.log(`SvgItem.render: (${this.props.id}) width: ${width} height: ${height}`)
 
     if (Number.isNaN(width) || Number.isNaN(height)) {
       console.warn("getSize returned size object with NaN, setting width and height to 0 to avoid react native error");
@@ -898,8 +900,8 @@ class SvgItem extends React.PureComponent {
     }
 
     if (Number.isNaN(left) || Number.isNaN(top)) {
-      console.warn("getAppPosition returned size object with NaN, setting x and y to 0 to avoid react native error");
-      console.warn(`Please investigate problem`, `id - ${this.props.id}`, this.getAppPosition());
+      console.warn("getRelativeAppPosition returned size object with NaN, setting x and y to 0 to avoid react native error");
+      console.warn(`Please investigate problem`, `id - ${this.props.id}`, this.getRelativeAppPosition());
       left = 0; top = 0;
     }
 
@@ -942,16 +944,14 @@ class SvgItem extends React.PureComponent {
 
                 {this.renderContent()}
 
-                
-
               </View>
             </PanGestureHandler>
           </TapGestureHandler>
 
-          <Portal hostName={this.props.scope || ROOT_ELEMENT_ID}>
+          <Portal hostName="controlLayerPortal">
             <View pointerEvents='box-none' style={{
               position: 'absolute',
-              width, height, left: resizeBoxX+positionOffset.x, top: resizeBoxY+positionOffset.y
+              width, height, left: resizeBoxX, top: resizeBoxY
             }}>
               { this.selected ? this.renderControlLayer() : null }
             </View>
@@ -1501,7 +1501,8 @@ SvgItem.defaultProps = {
   scale: 1,
   /** Gradients elements svgson */
   gradients: [],
-  positionOffset: { x: 0, y: 0 },
+  relativeOffset: { x: 0, y: 0 },
+  absoluteOffset: { x: 0, y: 0 },
 };
 
 export const GroupScopeSeparator = "@";

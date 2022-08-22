@@ -1,5 +1,4 @@
 import React from 'react';
-import { PortalHost } from '@gorhom/portal';
 
 import SvgItem, { SvgEmptyItem, GroupScopeSeparator } from './SvgItem';
 import { valueOrDefault } from '../utils';
@@ -10,8 +9,11 @@ class SvgGroupItem extends SvgItem {
 
   itemRefs = {};
 
+  _coors = {minX: 0, maxX: 0, minY: 0, maxY: 0};
   _shouldRefreshRect = false;
-  _positionOffset = {x: 0, y: 0};
+  _relativeOffset = {x: 0, y: 0};
+  _absoluteOffset = {x: 0, y: 0};
+  _initialPosition = null;
 
   constructor(props) {
     super(props);
@@ -35,38 +37,35 @@ class SvgGroupItem extends SvgItem {
     let attributes = super._initAttributes(a);
 
     if (this._shouldRefreshRect) {
-      let coors = this.getChildrenCoors(), {x: givenPositionOffsetX, y: givenPositionOffsetY} = this.props.positionOffset;
+      let coors = this.getChildrenCoors();
       if (coors) {
         // refresh rect attributes
         console.log(`SvgGroupItem (${this.props.id}): refreshing rect attributes`, coors);
 
-        const { minX, maxX, minY, maxY } = coors;
+        const { minX, minY } = coors;
 
-        attributes['devjeff:width'] = valueOrDefault(attributes['devjeff:width'], maxX-minX);
-        attributes['devjeff:height'] = valueOrDefault(attributes['devjeff:height'], maxY-minY);
-        attributes['devjeff:x'] = valueOrDefault(attributes['devjeff:x'], minX);
-        attributes['devjeff:y'] = valueOrDefault(attributes['devjeff:y'], minY);
-        // attributes['devjeff:width'] = maxX-minX;
-        // attributes['devjeff:height'] = maxY-minY;
-        // attributes['devjeff:x'] = minX;
-        // attributes['devjeff:y'] = minY;
-        attributes['appX'] = valueOrDefault(attributes['appX'], attributes['devjeff:x']);
-        attributes['appY'] = valueOrDefault(attributes['appY'], attributes['devjeff:y']);
+        this._coors = coors;
+        attributes['appX'] = valueOrDefault(attributes['appX'], minX);
+        attributes['appY'] = valueOrDefault(attributes['appY'], minY);
 
-        // let positionOffsetX = attributes['devjeff:x'] + (attributes['appX'] - attributes['devjeff:x']);
-        // let positionOffsetY = attributes['devjeff:y'] + (attributes['appY'] - attributes['devjeff:y']);
-        let positionOffsetX = attributes['devjeff:x'];
-        let positionOffsetY = attributes['devjeff:y'];
+        this._relativeOffset = { x: minX, y: minY };
 
-        // this._positionOffset = { x: positionOffsetX, y: positionOffsetY };
+        if (!this._initialPosition) {
+          this._initialPosition = { x: minX, y: minY };
+        }
       }
 
       this._shouldRefreshRect = false;
     }
 
+    if (this._initialPosition && !this.isRoot) {
+      this._absoluteOffset = {
+        x: this._initialPosition.x - valueOrDefault(attributes['appX'], 0),
+        y: this._initialPosition.y - valueOrDefault(attributes['appY'], 0)
+      };
+    }
 
-    this._positionOffset = { x: attributes['appX'] || 0, y: attributes['appY'] || 0 };
-    console.log(`SvgGroupItem._positionOffset`, this._positionOffset);
+    console.log(`SvgGroupItem._initAttributes (${this.props.id}):`, attributes);
 
     return attributes;
   }
@@ -85,7 +84,7 @@ class SvgGroupItem extends SvgItem {
 
     let childPos = Object.keys(this.itemRefs).map(id => {
       const child = this.itemRefs[id];
-      let {x, y} = child.getAppPosition(), {width, height} = child.getSize();
+      let {x, y} = child.getAbsoluteAppPosition(), {width, height} = child.getSize();
       // x1, y1  x2, y2
       return [{x, y}, {x: x+width, y: y+height}]
     }).flat();
@@ -97,21 +96,30 @@ class SvgGroupItem extends SvgItem {
   }
 
   _getSize() {
-    const width = this.state.attributes['devjeff:width'] || 0;
-    const height = this.state.attributes['devjeff:height'] || 0;
-    return {width, height};
+    const { minX, maxX, minY, maxY } = this._coors;
+    return {width: maxX-minX, height: maxY-minY};
   }
 
   _getPosition() {
-    const x = this.state.attributes['devjeff:x'] || 0;
-    const y = this.state.attributes['devjeff:y'] || 0;
-    return {x, y};
+    const { minX, minY } = this._coors;
+    return {x: minX, y: minY};
+  }
+
+  getRelativeAppPosition() {
+    if (this.isRoot) {
+      return this._getPosition();
+    } else {
+      return super.getRelativeAppPosition();
+    }
   }
 
   renderContent() {
     let {info: svgson, setCanvasItemRef} = this.props, children = svgson.get('children');
     let mergeAttributes = svgson.get("attributes");
     mergeAttributes = mergeAttributes.filter((attr, key) => !excludeAttributes.includes(key))
+
+
+    console.log(`SvgGroupItem.renderContent: (${this.props.id})`, this._absoluteOffset);
     
     children = children.map(child => {
       let name = child.get('name'), id = child.get('id');
@@ -123,7 +131,8 @@ class SvgGroupItem extends SvgItem {
       return (
         <ItemType
           {...this.props}
-          positionOffset={this._positionOffset}
+          relativeOffset={this._relativeOffset}
+          absoluteOffset={this._absoluteOffset}
           info={child}
           id={id}
           key={id}

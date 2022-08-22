@@ -413,6 +413,7 @@ class SvgEditor extends React.PureComponent {
 
     return (
       <SvgGroupItem
+        ref={ref => this.itemRefs[ROOT_ELEMENT_ID] = ref}
         info={fromJS(svgson)}
         selected={selected}
         id={ROOT_ELEMENT_ID}
@@ -442,7 +443,7 @@ class SvgEditor extends React.PureComponent {
     let nodes = Object.keys(this.itemRefs).filter(key => !(key == 'frame' || key == id))
       .map(key => {
         if (this.itemRefs[key]) {
-          const { x, y } = this.itemRefs[key].getAppPosition();
+          const { x, y } = this.itemRefs[key].getAbsoluteAppPosition();
           const { width, height } = this.itemRefs[key].getSize();
           return { x, y, width, height };
         } 
@@ -810,6 +811,7 @@ class SvgEditor extends React.PureComponent {
                   source={watermark} /> : null
               }
               { this.renderGuidelines() }
+              <PortalHost name="controlLayerPortal" />
             </ViewShot>
           </View>
         </PinchZoomView>
