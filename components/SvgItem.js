@@ -1318,10 +1318,6 @@ class SvgImageItem extends SvgItem {
   initialRendered = false;
   aspectRatio = 1;
 
-  get aspectLocked() {
-    return true;
-  }
-
   _initAttributes(a) {
     let attributes = super._initAttributes(a);
 
