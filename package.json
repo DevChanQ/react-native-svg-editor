@@ -15,7 +15,10 @@
     "react-native-wheel-color-picker": "^1.2.0",
     "@react-native-community/blur": "^3.6.0",
     "react-native-color-picker-ios": "^0.1.2",
-    "react-native-reanimated": "^2.8.0"
+    "react-native-reanimated": "^2.8.0",
+    "react-redux": "^7.2.5",
+    "react-native-google-mobile-ads": "^6.3.0",
+    "react-native-safe-area-context": "^4.2.5"
   },
   "dependencies": {
     "@gorhom/portal": "^1.0.14",
