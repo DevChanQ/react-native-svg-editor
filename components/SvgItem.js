@@ -95,6 +95,8 @@ class SvgItem extends React.PureComponent {
       gradientEditing: false,
       attributes: { ...this._lastAttributes },
     };
+
+    this._setupInternalGradient();
   }
 
   componentDidMount() {
@@ -163,7 +165,7 @@ class SvgItem extends React.PureComponent {
         
         let g = {
           type: 'element', name,
-          attributes: { x1, y1, x2, y2, ...otherAttrs },
+          attributes: { x1, y1, x2, y2, ...otherAttrs, gradientUnits: 'userSpaceOnUse' },
           children: stops
         };
         
@@ -174,29 +176,15 @@ class SvgItem extends React.PureComponent {
     return [];
   }
 
-  /** Getter for svgson of gradient, used by internal gradient display */
+  /** Getter for svgson of gradient, used by internal svg rendering */
   get internalGradientSvgson() {
-    const gradient = this.gradientFill;
-    if (gradient) {
-      const {x, y} = this.getPosition();
-      return [gradient].map(gradient => {
-        let { type: name, otherAttrs, stops, x1, y1, x2, y2 } = gradient;
-        x1 += x;x2 += x;y1 += y;y2 += y;
-        stops = stops.map(({ color, offset, opacity }) => ({
-          type: 'element', name: 'stop',
-          attributes: { offset, 'stop-color': color, 'stop-opacity': opacity },
-          children: []
-        }));
-  
-        return {
-          type: 'element', name,
-          attributes: { x1, y1, x2, y2, ...otherAttrs },
-          children: stops
-        }
-      });
-    }
+    const {x, y} = this.getPosition();
 
-    return [];
+    return this.gradientSvgson.map(g => {
+      let {attributes} = g;
+      attributes['x1'] += x;attributes['x2'] += x;attributes['y1'] += y;attributes['y2'] += y;
+      return g;
+    });
   }
 
   get isEditingGradient() {
@@ -346,15 +334,23 @@ class SvgItem extends React.PureComponent {
       delete attributes['transform'];
     }
 
-    // gradient attribute if relevent
-    if (attributes['fill']?.url && !attributes['devjeff:gradient']) {
+    return attributes;
+  }
+
+  /**
+   * Setup Internal Gradient, called in constructor
+   */
+  _setupInternalGradient() {
+    const {attributes} = this.state;
+    if (attributes['fill']?.url) {
       const {gradients} = this.props;
 
-      let selector = attributes['fill'].url; selector = selector.slice(1);
+      let selector = attributes['fill'].url;
+      selector = selector.slice(1);
       const fillGradient = gradients.find(gradient => gradient.attributes.id == selector);
       if (fillGradient) {
         let { name: type, children: stops=[], attributes: gradient } = fillGradient;
-        let { x1, y1, x2, y2, ...otherAttrs } = gradient;
+        let { x1, y1, x2, y2, ...otherAttrs } = gradient, gradientUnits = otherAttrs['gradientUnits'];
 
         // Linear Gradient Implementation as per:
         // https://www.w3.org/TR/SVG11/pservers.html#LinearGradientElementX1Attribute
@@ -374,11 +370,15 @@ class SvgItem extends React.PureComponent {
           return { offset, color, opacity };
         });
 
-        attributes['devjeff:gradient'] = { type, stops, x1, y1, x2, y2, otherAttrs };
+        if (!gradientUnits || gradientUnits === "objectBoundingBox") {
+          // objectBoundingBox
+          const {width, height} = this.getSize();
+          x1 *= width; x2 *= width; y1 *= height; y2 *= height;
+        }
+
+        this.state.attributes['devjeff:gradient'] = { type, stops, x1, y1, x2, y2, otherAttrs };
       }
     }
-
-    return attributes;
   }
 
   /**
@@ -735,15 +735,18 @@ class SvgItem extends React.PureComponent {
   }
 
   _generateXML() {
-    let {attributes: propsAttributes} = this.props.info.toObject();
     let {attributes} = this.state;
+    let {attributes: propsAttributes} = this.props.info.toObject();
 
     if (!this._cachedXML || !propsAttributes.equals(attributes)) {
-      this._cachedXML = stringify({
+      this._cachedXML =  stringify({
         name: 'svg',
         type: 'element',
         value: '',
-        attributes: {viewBox: this.getParentViewBox(), preserveAspectRatio: "none" },
+        attributes: {
+          viewBox: this.getParentViewBox(),
+          preserveAspectRatio: "none"
+        },
         children: [
           {
             name: 'defs',
@@ -757,8 +760,6 @@ class SvgItem extends React.PureComponent {
           }
         ]
       });
-
-      // console.log(this._cachedXML)
     }
 
     return this._cachedXML;
