@@ -73,6 +73,26 @@ class SvgGroupItem extends SvgItem {
     this.refreshValues();
   }
 
+  async toSvgson(external=true) {
+    let attributes = {...this.state.attributes};
+
+    const children = [], ids = Object.keys(this.itemRefs);
+    for (let id of ids) {
+      if (this.itemRefs[id]) {
+        let info = await this.itemRefs[id].toSvgson(external);
+        children.push(info);
+      }
+    }
+    
+    return {
+      name: 'g',
+      type: 'element',
+      value: '',
+      attributes,
+      children,
+    };
+  }
+
   onDoubleTap() {
     this.props.setScope(this.props.id);
   }
