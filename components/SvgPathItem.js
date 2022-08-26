@@ -89,8 +89,10 @@ class SvgPathItem extends SvgItem {
   }
   
   toSvgson(external=true) {
-    let info = super.toSvgson(), {attributes} = info;
-    let {appX, appY, d} = this.attributes, path = new Svg(d);
+    let info = this.props.info.toJS(), attributes = {...this.state.attributes};
+    info.attrbiutes = attributes;
+    
+    let {appX, appY, d} = attributes, path = new Svg(d);
 
     path.translate(appX - this._initialAttributes['appX'], appY - this._initialAttributes['appY']);
     attributes['d'] = path.asString();
@@ -104,7 +106,7 @@ class SvgPathItem extends SvgItem {
     delete attributes['width'];
     delete attributes['height'];
 
-    return info;
+    return super.toSvgson(external, info);
   }
 
   updateTargetPoint = (point, {x, y}) => {

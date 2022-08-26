@@ -244,9 +244,13 @@ class SvgItem extends React.PureComponent {
    * @param {Boolean} external Indicate whether the svgson object should be cleaned for external use or not
    * @returns {object,Promise} cleaned svgson object / Promise that resolves to svgson object
    */
-  toSvgson(external=true) {
-    let info = this.props.info.toJS();
-    let attributes = {...this.state.attributes};
+  toSvgson(external=true, info) {
+    if (!info) {
+      info = this.props.info.toJS();
+      info.attrbiutes = {...this.state.attributes};
+    }
+
+    let {attributes} = info;
 
     // deserialising attributes for export
     for (let key in attributes) {
@@ -266,12 +270,12 @@ class SvgItem extends React.PureComponent {
       attributes['x'] = attributes['appX'] || 0;
       attributes['y'] = attributes['appY'] || 0;
 
-      delete attributes['devjeff:rotate'];
-      // delete attributes['appX'];
-      // delete attributes['appY'];
+      delete attributes['appX'];
+      delete attributes['appY'];
+      for (let key in attributes) {
+        if (key.includes("devjeff:")) delete attributes[key];
+      }
     }
-
-    info.attributes = attributes;
 
     return info;
   }
@@ -1035,13 +1039,11 @@ class SvgPolygonItem extends SvgItem {
   }
 
   toSvgson(external=true) {
-    let info = super.toSvgson(external), {attributes} = info;
-    attributes['points'] = this.state.attributes['points'].map(p => `${p.x},${p.y}`).join(" ");
-
-    delete attributes['appX'];
-    delete attributes['appY'];
+    let info = this.props.info.toJS(), attributes = {...this.state.attributes};
+    info.attrbiutes = attributes;
+    attributes['points'] = attributes['points'].map(p => `${p.x},${p.y}`).join(" ");
     
-    return info;
+    return super.toSvgson(external, info);
   }
   
   transform(a) {
@@ -1073,16 +1075,12 @@ class SvgEllipseItem extends SvgItem {
   }
 
   toSvgson(external=true) {
-    let info = super.toSvgson(external), {attributes} = info;
-    attributes['cx'] = this.state.attributes['appX'] + attributes['rx'];
-    attributes['cy'] = this.state.attributes['appY'] + attributes['ry'];
-
-    delete attributes['appX'];
-    delete attributes['appY'];
-    delete attributes['x'];
-    delete attributes['y'];
+    let info = this.props.info.toJS(), attributes = {...this.state.attributes};
+    info.attrbiutes = attributes;
+    attributes['cx'] += attributes['appX']
+    attributes['cy'] += attributes['appY']
     
-    return info;
+    return super.toSvgson(external, info);
   }
 
   transform(a) {
@@ -1223,23 +1221,21 @@ class SvgTextItem extends SvgItem {
     super.scale(translation);
   }
 
-  toSvgson(external) {
-    let info = super.toSvgson(external), {attributes, children} = info;
+  toSvgson(external=true) {
+    let info = this.props.info.toJS(), attrbiutes = {...this.state.attributes}, {children} = info;
+    info.attrbiutes = attrbiutes;
 
-    info.children = [{...children[0], type: 'text'}]
+    info.children = [{...children[0], type: 'text'}];
 
     if (external) {
       attributes['x'] = attributes['appX'];
       attributes['y'] = attributes['appY'] + this.baselineOffset;
 
-      // delete attributes['appX'];
-      // delete attributes['appY'];
-
       delete attributes['width'];
       delete attributes['height'];
     }
     
-    return info;
+    return super.toSvgson(external, info);
   }
 
   onDoubleTap() {
@@ -1358,7 +1354,8 @@ class SvgImageItem extends SvgItem {
   }
 
   toSvgson(external=true) {
-    let info = super.toSvgson(external), {attributes} = info;
+    let info = this.props.info.toJS(), attributes = {...this.state.attributes};
+    info.attrbiutes = attributes;
     if (external) {
       // return a Promise if needs to be converted to base64
       const href = attributes['xlink:href'];
@@ -1370,7 +1367,7 @@ class SvgImageItem extends SvgItem {
       }
     }
 
-    return info;
+    return super.toSvgson(external, info);
   }
 
   onValueRefreshed = () => {
