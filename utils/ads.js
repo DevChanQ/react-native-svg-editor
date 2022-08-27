@@ -52,7 +52,7 @@ const useShowInterstitialAd = (options) => {
   }, [premium]);
 };
 
-const AdBanner = ({ adUnitId, safeArea=true, style=emptyObj }) => {
+const AdBanner = ({ adUnitId, dark=true, safeArea=true, style=emptyObj }) => {
   const premium = useSelector(selectPremium);
   const { bottom } = useSafeAreaInsets();
   if (premium) return <></>;
@@ -62,9 +62,9 @@ const AdBanner = ({ adUnitId, safeArea=true, style=emptyObj }) => {
   return (
     <View style={[{position: 'relative', paddingBottom: safeArea ? bottom : 0 }, style]}>
       <BlurView
-        blurType="materialDark"
         blurAmount={8}
-        reducedTransparencyFallbackColor="#333" />
+        blurType={dark ? "materialDark" : "materialLight"}
+        reducedTransparencyFallbackColor={dark ? "#333" : "#fff"} />
       <BannerAd 
         sizes={[BannerAdSize.ANCHORED_ADAPTIVE_BANNER]}
         unitId={__DEV__ ? TestIds.BANNER : adUnitId}

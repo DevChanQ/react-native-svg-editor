@@ -247,7 +247,7 @@ class SvgItem extends React.PureComponent {
   toSvgson(external=true, info) {
     if (!info) {
       info = this.props.info.toJS();
-      info.attrbiutes = {...this.state.attributes};
+      info.attributes = {...this.state.attributes};
     }
 
     let {attributes} = info;
@@ -651,7 +651,7 @@ class SvgItem extends React.PureComponent {
 
   /**
    * Transform attributes for displaying/rendering, override to customize. Called by `_generateXml` \
-   * Some attrbiutes of elements such as `<rect>` needs to be transformed under certain situations,
+   * Some attributes of elements such as `<rect>` needs to be transformed under certain situations,
    * for example `<rect>` with `stroke-width`
    * @param {object} attributes
    * @returns {object} transformed attributes
@@ -1040,7 +1040,7 @@ class SvgPolygonItem extends SvgItem {
 
   toSvgson(external=true) {
     let info = this.props.info.toJS(), attributes = {...this.state.attributes};
-    info.attrbiutes = attributes;
+    info.attributes = attributes;
     attributes['points'] = attributes['points'].map(p => `${p.x},${p.y}`).join(" ");
     
     return super.toSvgson(external, info);
@@ -1076,7 +1076,7 @@ class SvgEllipseItem extends SvgItem {
 
   toSvgson(external=true) {
     let info = this.props.info.toJS(), attributes = {...this.state.attributes};
-    info.attrbiutes = attributes;
+    info.attributes = attributes;
     attributes['cx'] += attributes['appX']
     attributes['cy'] += attributes['appY']
     
@@ -1222,8 +1222,8 @@ class SvgTextItem extends SvgItem {
   }
 
   toSvgson(external=true) {
-    let info = this.props.info.toJS(), attrbiutes = {...this.state.attributes}, {children} = info;
-    info.attrbiutes = attrbiutes;
+    let info = this.props.info.toJS(), attributes = {...this.state.attributes}, {children} = info;
+    info.attributes = attributes;
 
     info.children = [{...children[0], type: 'text'}];
 
@@ -1355,7 +1355,7 @@ class SvgImageItem extends SvgItem {
 
   toSvgson(external=true) {
     let info = this.props.info.toJS(), attributes = {...this.state.attributes};
-    info.attrbiutes = attributes;
+    info.attributes = attributes;
     if (external) {
       // return a Promise if needs to be converted to base64
       const href = attributes['xlink:href'];
