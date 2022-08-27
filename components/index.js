@@ -520,6 +520,7 @@ class SvgEditor extends React.PureComponent {
    * @returns {Promise} Promise that resolves to the uri of the exported image
    */
   export(options = {}) {
+    // TODO: fix scale bug after export
     const {preview, watermark, ...config} = options;
 
     this.setState({

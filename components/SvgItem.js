@@ -103,6 +103,8 @@ class SvgItem extends React.PureComponent {
       gradientEditing: false,
       attributes: { ...this._lastAttributes },
     };
+
+    this._setupInternalGradient();
   }
   
   componentDidUpdate({info}) {
@@ -212,7 +214,7 @@ class SvgItem extends React.PureComponent {
         
         let g = {
           type: 'element', name,
-          attributes: { x1, y1, x2, y2, ...otherAttrs },
+          attributes: { x1, y1, x2, y2, ...otherAttrs, gradientUnits: 'userSpaceOnUse' },
           children: stops
         };
         
@@ -223,29 +225,15 @@ class SvgItem extends React.PureComponent {
     return [];
   }
 
-  /** Getter for svgson of gradient, used by internal gradient display */
+  /** Getter for svgson of gradient, used by internal svg rendering */
   get internalGradientSvgson() {
-    const gradient = this.gradientFill;
-    if (gradient) {
-      const {x, y} = this.getPosition();
-      return [gradient].map(gradient => {
-        let { type: name, otherAttrs, stops, x1, y1, x2, y2 } = gradient;
-        x1 += x;x2 += x;y1 += y;y2 += y;
-        stops = stops.map(({ color, offset, opacity }) => ({
-          type: 'element', name: 'stop',
-          attributes: { offset, 'stop-color': color, 'stop-opacity': opacity },
-          children: []
-        }));
-  
-        return {
-          type: 'element', name,
-          attributes: { x1, y1, x2, y2, ...otherAttrs },
-          children: stops
-        }
-      });
-    }
+    const {x, y} = this.getPosition();
 
-    return [];
+    return this.gradientSvgson.map(g => {
+      let {attributes} = g;
+      attributes['x1'] += x;attributes['x2'] += x;attributes['y1'] += y;attributes['y2'] += y;
+      return g;
+    });
   }
 
   get attributes() {
@@ -289,9 +277,13 @@ class SvgItem extends React.PureComponent {
    * @param {Boolean} external Indicate whether the svgson object should be cleaned for external use or not
    * @returns {object,Promise} cleaned svgson object / Promise that resolves to svgson object
    */
-  toSvgson(external=true) {
-    let info = this.props.info.toJS();
-    let attributes = {...this.state.attributes};
+  toSvgson(external=true, info) {
+    if (!info) {
+      info = this.props.info.toJS();
+      info.attributes = {...this.state.attributes};
+    }
+
+    let {attributes} = info;
 
     // deserialising attributes for export
     for (let key in attributes) {
@@ -311,12 +303,12 @@ class SvgItem extends React.PureComponent {
       attributes['x'] = attributes['appX'] || 0;
       attributes['y'] = attributes['appY'] || 0;
 
-      delete attributes['devjeff:rotate'];
-      // delete attributes['appX'];
-      // delete attributes['appY'];
+      delete attributes['appX'];
+      delete attributes['appY'];
+      for (let key in attributes) {
+        if (key.includes("devjeff:")) delete attributes[key];
+      }
     }
-
-    info.attributes = attributes;
 
     return info;
   }
@@ -380,15 +372,23 @@ class SvgItem extends React.PureComponent {
       delete attributes['transform'];
     }
 
-    // gradient attribute if relevent
-    if (attributes['fill']?.url && !attributes['devjeff:gradient']) {
+    return attributes;
+  }
+
+  /**
+   * Setup Internal Gradient, called in constructor
+   */
+  _setupInternalGradient() {
+    const {attributes} = this.state;
+    if (attributes['fill']?.url) {
       const {gradients} = this.props;
 
-      let selector = attributes['fill'].url; selector = selector.slice(1);
+      let selector = attributes['fill'].url;
+      selector = selector.slice(1);
       const fillGradient = gradients.find(gradient => gradient.attributes.id == selector);
       if (fillGradient) {
         let { name: type, children: stops=[], attributes: gradient } = fillGradient;
-        let { x1, y1, x2, y2, ...otherAttrs } = gradient;
+        let { x1, y1, x2, y2, ...otherAttrs } = gradient, gradientUnits = otherAttrs['gradientUnits'];
 
         // Linear Gradient Implementation as per:
         // https://www.w3.org/TR/SVG11/pservers.html#LinearGradientElementX1Attribute
@@ -408,11 +408,15 @@ class SvgItem extends React.PureComponent {
           return { offset, color, opacity };
         });
 
-        attributes['devjeff:gradient'] = { type, stops, x1, y1, x2, y2, otherAttrs };
+        if (!gradientUnits || gradientUnits === "objectBoundingBox") {
+          // objectBoundingBox
+          const {width, height} = this.getSize();
+          x1 *= width; x2 *= width; y1 *= height; y2 *= height;
+        }
+
+        this.state.attributes['devjeff:gradient'] = { type, stops, x1, y1, x2, y2, otherAttrs };
       }
     }
-
-    return attributes;
   }
 
   /**
@@ -684,7 +688,7 @@ class SvgItem extends React.PureComponent {
 
   /**
    * Transform attributes for displaying/rendering, override to customize. Called by `_generateXml` \
-   * Some attrbiutes of elements such as `<rect>` needs to be transformed under certain situations,
+   * Some attributes of elements such as `<rect>` needs to be transformed under certain situations,
    * for example `<rect>` with `stroke-width`
    * @param {object} attributes
    * @returns {object} transformed attributes
@@ -779,15 +783,18 @@ class SvgItem extends React.PureComponent {
   }
 
   _generateXML() {
-    let {attributes: propsAttributes} = this.props.info.toObject();
     let {attributes} = this.state;
+    let {attributes: propsAttributes} = this.props.info.toObject();
 
     if (!this._cachedXML || !propsAttributes.equals(attributes)) {
-      this._cachedXML = stringify({
+      this._cachedXML =  stringify({
         name: 'svg',
         type: 'element',
         value: '',
-        attributes: {viewBox: this.getParentViewBox(), preserveAspectRatio: "none" },
+        attributes: {
+          viewBox: this.getParentViewBox(),
+          preserveAspectRatio: "none"
+        },
         children: [
           {
             name: 'defs',
@@ -801,8 +808,6 @@ class SvgItem extends React.PureComponent {
           }
         ]
       });
-
-      // console.log(this._cachedXML)
     }
 
     return this._cachedXML;
@@ -1090,13 +1095,11 @@ class SvgPolygonItem extends SvgItem {
   }
 
   toSvgson(external=true) {
-    let info = super.toSvgson(external), {attributes} = info;
-    attributes['points'] = this.state.attributes['points'].map(p => `${p.x},${p.y}`).join(" ");
-
-    delete attributes['appX'];
-    delete attributes['appY'];
+    let info = this.props.info.toJS(), attributes = {...this.state.attributes};
+    info.attributes = attributes;
+    attributes['points'] = attributes['points'].map(p => `${p.x},${p.y}`).join(" ");
     
-    return info;
+    return super.toSvgson(external, info);
   }
   
   transform(a) {
@@ -1128,16 +1131,12 @@ class SvgEllipseItem extends SvgItem {
   }
 
   toSvgson(external=true) {
-    let info = super.toSvgson(external), {attributes} = info;
-    attributes['cx'] = this.state.attributes['appX'] + attributes['rx'];
-    attributes['cy'] = this.state.attributes['appY'] + attributes['ry'];
-
-    delete attributes['appX'];
-    delete attributes['appY'];
-    delete attributes['x'];
-    delete attributes['y'];
+    let info = this.props.info.toJS(), attributes = {...this.state.attributes};
+    info.attributes = attributes;
+    attributes['cx'] += attributes['appX']
+    attributes['cy'] += attributes['appY']
     
-    return info;
+    return super.toSvgson(external, info);
   }
 
   transform(a) {
@@ -1272,23 +1271,21 @@ class SvgTextItem extends SvgItem {
     super.scale(translation);
   }
 
-  toSvgson(external) {
-    let info = super.toSvgson(external), {attributes, children} = info;
+  toSvgson(external=true) {
+    let info = this.props.info.toJS(), attributes = {...this.state.attributes}, {children} = info;
+    info.attributes = attributes;
 
-    info.children = [{...children[0], type: 'text'}]
+    info.children = [{...children[0], type: 'text'}];
 
     if (external) {
       attributes['x'] = attributes['appX'];
       attributes['y'] = attributes['appY'] + this.baselineOffset;
 
-      // delete attributes['appX'];
-      // delete attributes['appY'];
-
       delete attributes['width'];
       delete attributes['height'];
     }
     
-    return info;
+    return super.toSvgson(external, info);
   }
 
   onDoubleTap() {
@@ -1368,10 +1365,6 @@ class SvgImageItem extends SvgItem {
   initialRendered = false;
   aspectRatio = 1;
 
-  get aspectLocked() {
-    return true;
-  }
-
   _initAttributes(a) {
     let attributes = super._initAttributes(a);
 
@@ -1411,7 +1404,8 @@ class SvgImageItem extends SvgItem {
   }
 
   toSvgson(external=true) {
-    let info = super.toSvgson(external), {attributes} = info;
+    let info = this.props.info.toJS(), attributes = {...this.state.attributes};
+    info.attributes = attributes;
     if (external) {
       // return a Promise if needs to be converted to base64
       const href = attributes['xlink:href'];
@@ -1423,7 +1417,7 @@ class SvgImageItem extends SvgItem {
       }
     }
 
-    return info;
+    return super.toSvgson(external, info);
   }
 
   onValueRefreshed = () => {
