@@ -57,6 +57,7 @@ class SvgGroupItem extends SvgItem {
     }
 
     if (this._initialPosition && !this.isRoot) {
+      const {absoluteOffset} = this.props;
       this._absoluteOffset = {
         x: this._initialPosition.x - valueOrDefault(attributes['appX'], 0),
         y: this._initialPosition.y - valueOrDefault(attributes['appY'], 0)
@@ -97,17 +98,25 @@ class SvgGroupItem extends SvgItem {
     this.props.setScope(this.props.id);
   }
 
+  /**
+   * Get the children element coors
+   * @returns {(object|null)} coors
+   */
   getChildrenCoors() {
     if (!(this.itemRefs && Object.keys(this.itemRefs).length > 0)) return null;
 
     let childPos = Object.keys(this.itemRefs).map(id => {
       const child = this.itemRefs[id];
       if (!child) return null;
-      let {x, y} = child.getAbsoluteAppPosition(), {width, height} = child.getSize();
+      let {x, y} = child.getAppPosition(), {width, height} = child.getSize();
       if (typeof x !== 'number' || typeof y !== 'number' || typeof width !== 'number' || typeof height !== 'number') return null;
       // x1, y1  x2, y2
       return [{x, y}, {x: x+width, y: y+height}]
     }).flat().filter(coor => coor);
+
+    if (childPos.length === 0) {
+      return { minX: 0, maxX: 0, minY: 0, maxY: 0 };
+    }
 
     let xCoor = childPos.map(coor => coor.x), yCoor = childPos.map(coor => coor.y);
     let minX = Math.min(...xCoor), maxX = Math.max(...xCoor), minY = Math.min(...yCoor), maxY = Math.max(...yCoor);
@@ -138,8 +147,6 @@ class SvgGroupItem extends SvgItem {
     let mergeAttributes = svgson.get("attributes");
     mergeAttributes = mergeAttributes.filter((attr, key) => !excludeAttributes.includes(key))
 
-    // console.log(`SvgGroupItem.renderContent: (${this.props.id})`, this._absoluteOffset);
-    
     children = children.map(child => {
       let name = child.get('name'), id = child.get('id');
       // console.log('SvgGroupItem.renderContent: ', id);

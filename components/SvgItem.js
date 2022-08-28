@@ -300,9 +300,7 @@ class SvgItem extends React.PureComponent {
         attributes['transform'] = `rotate(${rotate} ${appX} ${appY})`;
       }
 
-      attributes['x'] = attributes['appX'] || 0;
-      attributes['y'] = attributes['appY'] || 0;
-
+      // remove custom attributes
       delete attributes['appX'];
       delete attributes['appY'];
       for (let key in attributes) {
@@ -350,10 +348,11 @@ class SvgItem extends React.PureComponent {
     // transform attributes init
     if (attributes['transform']) {
       let transforms = attributes['transform'].split(")").filter(transform => !!transform);
-      
       for (let transform of transforms) {
         let [command, values] = transform.split("(");
+        command = command.replace(/\s/g, "");
         values = values.split(" ");
+
         if (command === 'rotate') {
           attributes['devjeff:rotate'] = parseFloat(values[0]);
         } else if (command === 'translate') {
@@ -564,7 +563,7 @@ class SvgItem extends React.PureComponent {
   onValueRefreshed = (changed) => {};
 
   /**
-   * Called on componentDidMount
+   * Called in constructor
    * @param {object} attributes Object that contains the initial attributes 
    */
   onInit = (attributes) => {};
@@ -650,7 +649,7 @@ class SvgItem extends React.PureComponent {
       appX = x, appY = y;
     }
 
-    this.updateAttributes({ appX, appY });
+    this.setPosition({x: appX, y: appY, update: true});
   }
 
   /**
@@ -746,25 +745,34 @@ class SvgItem extends React.PureComponent {
     return {x: x-strokeWidth/2, y: y-strokeWidth/2};
   }
 
+  getParentViewBox() {
+    const {width, height} = this.getSize(), {x, y} = this.getPosition();
+    return `${x} ${y} ${width} ${height}`;
+  }
+
+  /**
+   * Returns app position, not offseted
+   * @returns {Point} App position Point object
+   */
+  getAppPosition() {
+    const {attributes: {appX=0, appY=0}} = this.state;
+    const stroke = this.state.attributes['stroke'], strokeWidth = stroke ? this.state.attributes['stroke-width'] : 0;
+    const translateX = this.state.attributes['devjeff:translateX'] || 0, translateY = this.state.attributes['devjeff:translateY'] || 0;
+    return {x: appX+translateX-strokeWidth/2, y: appY+translateY-strokeWidth/2};
+  }
+
   /**
    * Returns relative app position used for rendering (position relative to parent)
    * @returns {Point} App position Point object
    */
   getRelativeAppPosition() {
-    const {attributes: {appX=0, appY=0}} = this.state, {relativeOffset} = this.props;
-    const translateX = this.state.attributes['devjeff:translateX'] || 0, translateY = this.state.attributes['devjeff:translateY'] || 0;
-    return {x: appX+translateX-relativeOffset.x, y: appY+translateY-relativeOffset.y}
+    const {x, y} = this.getAppPosition(), {relativeOffset} = this.props;
+    return {x: x-relativeOffset.x, y: y-relativeOffset.y};
   }
 
   getAbsoluteAppPosition() {
-    const {attributes: {appX=0, appY=0}} = this.state, {absoluteOffset} = this.props;
-    const translateX = this.state.attributes['devjeff:translateX'] || 0, translateY = this.state.attributes['devjeff:translateY'] || 0;
-    return {x: appX+translateX-absoluteOffset.x, y: appY+translateY-absoluteOffset.y}
-  }
-
-  getParentViewBox() {
-    const {width, height} = this.getSize(), {x, y} = this.getPosition();
-    return `${x} ${y} ${width} ${height}`;
+    const {x, y} = this.getAppPosition(), {absoluteOffset} = this.props;
+    return {x: x-absoluteOffset.x, y: y-absoluteOffset.y};
   }
 
   /**
@@ -779,6 +787,18 @@ class SvgItem extends React.PureComponent {
       this.updateAttributes({ width, height });
     } else {
       this.setAttributes({ width, height });
+    }
+  }
+
+  setPosition({ x, y, update=false }) {
+    const stroke = this.state.attributes['stroke'], strokeWidth = stroke ? this.state.attributes['stroke-width'] : 0;
+    const translateX = this.state.attributes['devjeff:translateX'] || 0, translateY = this.state.attributes['devjeff:translateY'] || 0;
+    x += (translateX+strokeWidth/2);
+    y += (translateY+strokeWidth/2);
+    if (update) {
+      this.updateAttributes({ appX: x, appY: y });
+    } else {
+      this.setAttributes({ appX: x, appY: y });
     }
   }
 
@@ -911,7 +931,7 @@ class SvgItem extends React.PureComponent {
     if (Number.isNaN(resizeBoxX) || Number.isNaN(resizeBoxY)) {
       console.warn("getAbsoluteAppPosition returned size object with NaN, setting x and y to 0 to avoid react native error");
       console.warn(`Please investigate problem`, `id - ${this.props.id}`, this.getAbsoluteAppPosition());
-      resizeBoxX = 0; resizeBoxYr = 0;
+      resizeBoxX = 0; resizeBoxY = 0;
     }
 
     width = PixelRatio.roundToNearestPixel(width), height = PixelRatio.roundToNearestPixel(height);
@@ -1056,26 +1076,14 @@ class SvgRectItem extends SvgItem {
     return attributes;
   }
 
-  // renderContent() {
-  //   let {rx} = this.state.attributes;
-  //   if (!rx) {
-  //     let {fill: backgroundColor} = this.state.attributes;
-  //     let borderColor = this.state.attributes['stroke'] || '#000000';
-  //     let borderWidth = this.state.attributes['stroke-width'] || 0;
-
-  //     return (
-  //       <View style={{
-  //         width: '100%',
-  //         height: '100%',
-  //         backgroundColor,
-  //         borderWidth,
-  //         borderColor,
-  //       }} />
-  //     )
-  //   } 
-
-  //   return super.renderContent();
-  // }
+  toSvgson(external=true) {
+    let info = this.props.info.toJS(), attributes = {...this.state.attributes};
+    info.attributes = attributes;
+    attributes['x'] = attributes['appX'];
+    attributes['y'] = attributes['appY'];
+    
+    return super.toSvgson(external, info);
+  }
 }
 
 class SvgPolygonItem extends SvgItem {
@@ -1132,9 +1140,10 @@ class SvgEllipseItem extends SvgItem {
 
   toSvgson(external=true) {
     let info = this.props.info.toJS(), attributes = {...this.state.attributes};
+    const {x, y} = this.getAppPosition(), {width, height} = this.getSize();
     info.attributes = attributes;
-    attributes['cx'] += attributes['appX']
-    attributes['cy'] += attributes['appY']
+    attributes['cx'] = x + (width / 2);
+    attributes['cy'] = y + (height / 2);
     
     return super.toSvgson(external, info);
   }
@@ -1278,8 +1287,9 @@ class SvgTextItem extends SvgItem {
     info.children = [{...children[0], type: 'text'}];
 
     if (external) {
-      attributes['x'] = attributes['appX'];
-      attributes['y'] = attributes['appY'] + this.baselineOffset;
+      const {x, y} = this.getAppPosition();
+      attributes['x'] = x;
+      attributes['y'] = y + this.baselineOffset;
 
       delete attributes['width'];
       delete attributes['height'];

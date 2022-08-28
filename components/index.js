@@ -564,7 +564,13 @@ class SvgEditor extends React.PureComponent {
 
     // TODO: Find a better way to determine viewBox of the svg
     let {width=0, height=0} = this.state.canvasSize;
-    let viewBox = `0 0 ${width} ${height}`;
+    let rootAttributes = { 
+      viewBox: `0 0 ${width} ${height}`,
+    };
+
+    // if (external) {
+    //   rootAttributes["xmlns"] = "http://www.w3.org/2000/svg";
+    // }
 
     // get children svgson
     const EXCLUDE_ELEMENTS = ['title', 'defs', 'style', 'metadata', 'desc']
@@ -600,7 +606,7 @@ class SvgEditor extends React.PureComponent {
       name: 'svg',
       type: 'element',
       value: '',
-      attributes: {viewBox},
+      attributes: rootAttributes,
       children: svgsons,
     });
     console.log('SvgEditor.exportSvg(): ' + svg);
