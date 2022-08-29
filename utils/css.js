@@ -415,7 +415,7 @@ fi.prototype.intelligentCSSPush = function(cssObjectArray, minimalObject, revers
         }
       }
     } else {
-      cssObject.subStyles = cssObject.subStyles.concat(minimalObject.subStyles); //TODO: make this intelligent too
+      cssObject.subStyles = cssObject.subStyles.concat(minimalObject.subStyles);
     }
 
   }

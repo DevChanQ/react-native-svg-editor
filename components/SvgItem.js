@@ -292,7 +292,6 @@ class SvgItem extends React.PureComponent {
       if (typeof attributes[key] === 'object') { delete attributes[key] }
     }
 
-    // TODO: external transform
     if (external) {
       let rotate = parseFloat(attributes['devjeff:rotate'] || 0);
       if (rotate) {
@@ -1283,6 +1282,7 @@ class SvgTextItem extends SvgItem {
     info.children = [{...children[0], type: 'text'}];
 
     if (external) {
+      // TODO: external export should transform text to path element
       const {x, y} = this.getAppPosition();
       attributes['x'] = x;
       attributes['y'] = y + this.baselineOffset;

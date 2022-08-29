@@ -437,6 +437,7 @@ class SvgEditor extends React.PureComponent {
     );
   }
 
+  // TODO: update guideline calculate logic/implementation
   _offsetPositionToGuideline = (rect, id) => {
     let {x, y} = rect;
     if (this._disableGuideline) {
@@ -520,16 +521,15 @@ class SvgEditor extends React.PureComponent {
    * @returns {Promise} Promise that resolves to the uri of the exported image
    */
   export(options = {}) {
-    // TODO: fix scale bug after export
     const {preview, watermark, ...config} = options;
 
     this.setState({
       selected: null,
       scope: null,
-      scale: preview ? 1 : 3,
       watermark,
     });
 
+    // TODO: export image resolution control
     // capture canvas next tick (after 'deselect' action)
     return new Promise(resolve => {
       setTimeout(() => {
@@ -545,9 +545,7 @@ class SvgEditor extends React.PureComponent {
           height: height / PixelRatio.get(),
           ...config,
         }).then(uri => {
-          this.setState({
-            watermark: null,
-          });
+          this.setState({ watermark: null });
           resolve(uri);
         });
       }, 300);
@@ -562,7 +560,7 @@ class SvgEditor extends React.PureComponent {
   async exportSvg(external=false) {
     let svgson = this._getLatestSvgson(), children = svgson.children;
 
-    // TODO: Find a better way to determine viewBox of the svg
+    // svg viewbox is determined by canvasSize state
     let {width=0, height=0} = this.state.canvasSize;
     let rootAttributes = { 
       viewBox: `0 0 ${width} ${height}`,
