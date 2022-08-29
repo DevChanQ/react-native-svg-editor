@@ -657,21 +657,26 @@ class SvgItem extends React.PureComponent {
    */
   scale({ translationX, translationY, scale }) {
     let {width, height, appX, appY} = this._lastAttributes;
-    let updatedAttributes = { width, height, appX, appY };
 
     if (scale) {
+      let updatedAttributes = { width, height, appX, appY };
+
       updatedAttributes['width'] *= scale;
       updatedAttributes['height'] *= scale;
       updatedAttributes['appX'] -= (updatedAttributes['width'] - width)/2;
       updatedAttributes['appY'] -= (updatedAttributes['height'] - height)/2;
+
+      this.updateAttributes(updatedAttributes)
     } else {
-      updatedAttributes['width'] += translationX / this.getScale();
-      updatedAttributes['height'] += translationY / this.getScale();
+      width += translationX / this.getScale();
+      height += translationY / this.getScale();
 
       if (this.aspectLocked) {
-        if (this.aspectRatio > 1) updatedAttributes['height'] = updatedAttributes['width'] / this.aspectRatio;
-        else updatedAttributes['width'] = updatedAttributes['height'] * this.aspectRatio;
+        if (this.aspectRatio > 1) height = width / this.aspectRatio;
+        else width = height * this.aspectRatio;
       }
+
+      this.setSize({width, height, update: true});
 
       // calculate guidelines
       // if (this.props.offsetPositionToGuideline) {
@@ -681,8 +686,6 @@ class SvgItem extends React.PureComponent {
       //   updatedAttributes['height'] += y - appY;
       // }
     }
-
-    this.updateAttributes(updatedAttributes)
   }
 
   /**
@@ -780,7 +783,10 @@ class SvgItem extends React.PureComponent {
    * @param {number} size.width new width
    * @param {number} size.height new height
    */
-  setSize({ width, height, update=false, offsetStrokeWidth=true }) {
+  setSize({ width=-1, height=-1, update=false, offsetStrokeWidth=true }) {
+    width = Math.abs(width);
+    height = Math.abs(height);
+
     const strokeWidth = offsetStrokeWidth ? this.state.attributes['stroke-width'] : 0;
     width = parseFloat(width) - strokeWidth, height = parseFloat(height) - strokeWidth;
     if (update) {
@@ -1147,20 +1153,7 @@ class SvgEllipseItem extends SvgItem {
     
     return super.toSvgson(external, info);
   }
-
-  transform(a) {
-    let attributes = super.transform(a);
-
-    // if (attributes['stroke-width']) {
-    //   let strokeWidth = attributes['stroke-width'];
-
-    //   attributes['rx'] -= strokeWidth/2;
-    //   attributes['ry'] -= strokeWidth/2;
-    // }
-
-    return attributes;
-  }
-
+  
   scale({translationX, translationY}) {
     let {rx, ry} = this._lastAttributes;
     rx += (translationX / this.getScale()) / 2;
@@ -1175,6 +1168,9 @@ class SvgEllipseItem extends SvgItem {
   }
   
   setSize({ width, height, update=false, offsetStrokeWidth=true }) {
+    width = Math.abs(width);
+    height = Math.abs(height);
+
     const strokeWidth = offsetStrokeWidth ? this.state.attributes['stroke-width'] : 0;
     width = parseFloat(width) - strokeWidth, height = parseFloat(height) - strokeWidth;
     let rx = width / 2, ry = height / 2;

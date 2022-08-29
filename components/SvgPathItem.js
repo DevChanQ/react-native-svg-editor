@@ -14,40 +14,6 @@ const PathState = {
   CLOSED: 'C', 
 }
 
-const styles = StyleSheet.create({
-  absolute: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-  },
-  targetPoint: {
-    width: 16,
-    height: 16,
-    position: 'absolute',
-    backgroundColor: 'white',
-    borderWidth: 1,
-    borderColor: '#19A0FB',
-    borderRadius: 12,
-    marginLeft: -8,
-    marginTop: -8,
-  },
-  controlPoint: {
-    width: 12,
-    height: 12,
-    position: 'absolute',
-    backgroundColor: 'white',
-    borderWidth: 1,
-    borderColor: '#19A0FB',
-    marginLeft: -6,
-    marginTop: -6,
-  },
-  controlPointLine: {
-
-  }
-})
-
 class SvgPathItem extends SvgItem {
   MODE = PathState.START;
   
@@ -74,9 +40,13 @@ class SvgPathItem extends SvgItem {
   }
 
   onValueRefreshed = (changed) => {
-    this._refreshParsedPath();
-    this._lastKX = 1;
-    this._lastKY = 1;
+    console.log('SvgPathItem.onValueRefreshed: ', changed);
+
+    if (changed['d']) {
+      this._refreshParsedPath();
+      this._lastKX = 1;
+      this._lastKY = 1;
+    }
   }
 
   _initAttributes(a) {
@@ -92,21 +62,27 @@ class SvgPathItem extends SvgItem {
   
   toSvgson(external=true) {
     let info = this.props.info.toJS(), attributes = {...this.state.attributes};
-    info.attrbiutes = attributes;
-    
-    let {appX, appY, d} = attributes, path = new Svg(d);
+    info.attributes = attributes;
 
-    path.translate(appX - this._initialAttributes['appX'], appY - this._initialAttributes['appY']);
-    attributes['d'] = path.asString();
+    if (external) {
+      const {d, appX, appY} = attributes, {left: x, top: y} = this.getBoundingBox(d);
+      let translateX = appX - x, translateY = appY - y;
 
-    delete attributes['x'];
-    delete attributes['y'];
-    delete attributes['left'];
-    delete attributes['right'];
-    delete attributes['top'];
-    delete attributes['bottom'];
-    delete attributes['width'];
-    delete attributes['height'];
+      if (translateX != 0 || translateY != 0) {
+        let path = new Svg(d);
+        path.translate(translateX, translateY);
+        attributes['d'] = path.asString(2, true);
+      }
+
+      delete attributes['x'];
+      delete attributes['y'];
+      delete attributes['left'];
+      delete attributes['right'];
+      delete attributes['top'];
+      delete attributes['bottom'];
+      delete attributes['width'];
+      delete attributes['height'];
+    }
 
     return super.toSvgson(external, info);
   }
@@ -229,6 +205,9 @@ class SvgPathItem extends SvgItem {
   }
 
   setSize({ width: newWidth, height: newHeight, update=false, offsetStrokeWidth=true }) {
+    newWidth = Math.abs(newWidth);
+    newHeight = Math.abs(newHeight);
+
     const strokeWidth = offsetStrokeWidth ? this.state.attributes['stroke-width'] : 0;
     let {width, height} = this._lastAttributes;
     
