@@ -410,6 +410,8 @@ class SvgItem extends React.PureComponent {
           // objectBoundingBox
           const {width, height} = this.getSize();
           x1 *= width; x2 *= width; y1 *= height; y2 *= height;
+        } else {
+          // TODO: userSpaceOnUse gradient
         }
 
         this.state.attributes['devjeff:gradient'] = { type, stops, x1, y1, x2, y2, otherAttrs };
@@ -1231,7 +1233,7 @@ class SvgCircleItem extends SvgItem {
 class SvgTextItem extends SvgItem {
   // TODO: Implement <tspan>
 
-  baselineOffset = 0;
+  _baselineOffset = 0;
   valueRefreshed = true;
   manuallyEdited = false;
 
@@ -1268,7 +1270,7 @@ class SvgTextItem extends SvgItem {
 
   onValueRefreshed = (changed) => {
     this.valueRefreshed = true;
-  }
+  };
 
   scale(translation) {
     if (!this.manuallyEdited) this.manuallyEdited = true;
@@ -1285,7 +1287,7 @@ class SvgTextItem extends SvgItem {
       // TODO: external export should transform text to path element
       const {x, y} = this.getAppPosition();
       attributes['x'] = x;
-      attributes['y'] = y + this.baselineOffset;
+      attributes['y'] = y + this._baselineOffset;
 
       delete attributes['width'];
       delete attributes['height'];
@@ -1293,6 +1295,15 @@ class SvgTextItem extends SvgItem {
     
     return super.toSvgson(external, info);
   }
+
+  getAppPosition() {
+    const {x, y} = super.getAppPosition();
+    return {x, y: y-this._baselineOffset};
+  }
+
+  // setPosition({ y, ...other }) {
+  //   return super.setPosition({ y: y+this._baselineOffset, ...other });
+  // }
 
   onDoubleTap() {
     this.setState({ editMode: !this.state.editMode });
@@ -1311,10 +1322,13 @@ class SvgTextItem extends SvgItem {
       let height = heights.reduce((p, v) => ( p > v ? p : v ), 0), width = widths.reduce((p, v) => p + v, 0);
       let size = {width: width || 100, height: height || 100};
 
-      this.baselineOffset = lines[0]?.ascender || 0;
+      this._baselineOffset = lines[0]?.ascender || 0;
       this.valueRefreshed = false;
 
-      this.setAttributes({width: Math.round(size.width+2), height: Math.round(size.height)}, false);
+      this.setAttributes({
+        width: Math.round(size.width+2),
+        height: Math.round(size.height)
+      }, false);
     }
   }
 

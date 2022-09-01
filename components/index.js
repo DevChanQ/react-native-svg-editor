@@ -47,6 +47,15 @@ const styles = StyleSheet.create({
     left: 0,
     bottom: 0
   },
+  canvasGuide: {
+    position: 'absolute',
+    top: '100%',
+    resizeMode: 'contain',
+    aspectRatio: 4.3,
+    alignSelf: 'center',
+
+    transform: [{translateY: 30}]
+  },
   svgs: {
     position: 'absolute',
   },
@@ -806,7 +815,13 @@ class SvgEditor extends React.PureComponent {
           onZoomEnd={this.onZoomEnd}
           {...pinchZoomViewProps}>
           <View style={styles.frameContainer}>
+            <ImageBackground
+              pointerEvents="none"
+              style={[styles.canvasGuide, { width: 180 }]}
+              source={require("../assets/canvas-guide/canvas-guide.png")} /> 
+
             <View pointerEvents='none' style={styles.frame} />
+
             <ViewShot ref={this.viewShot} options={{format: 'jpg'}}>
               <View style={{width, height}}></View>
               <View onLayout={this._onEditorLayout} style={styles.svgs}>
@@ -823,7 +838,6 @@ class SvgEditor extends React.PureComponent {
             </ViewShot>
           </View>
         </PinchZoomView>
-
       </PortalProvider>
     )
   }
