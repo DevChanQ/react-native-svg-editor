@@ -14,7 +14,6 @@ import {
   SvgPolygonItem,
   SvgEllipseItem,
   SvgCircleItem,
-  SvgPlainItem,
   SvgTextItem,
   SvgImageItem,
 
@@ -357,14 +356,19 @@ class SvgEditor extends React.PureComponent {
         // remove child id
         targetSplitted.pop();
         if (targetSplitted.length > 0) {
-          for (let split of targetSplitted) {
-            children = children.find(child => child.id === split)?.children || [];
+          for (let i = 0;i < targetSplitted.length;i++) {
+            let id = targetSplitted.slice(0, i+1).join(GroupScopeSeparator);
+            children = children.find(child => child.id === id)?.children || [];
           }
         }
         
         targetIndex = children.findIndex(child => child.id === target);
-        if (targetIndex < 0) continue// throw new Error('Target not found');
+        if (targetIndex < 0) {
+          console.log('SvgEditor._getLatestSvgson(): target cannot be identified');
+          continue
+        }
       }
+
 
       const performAction = (t) => {
         switch (t) {
@@ -453,7 +457,12 @@ class SvgEditor extends React.PureComponent {
       return {x, y};
     }
 
-    let nodes = Object.keys(this.itemRefs).filter(key => !(key == 'frame' || key == id))
+    const {scope} = this.state;
+    let ids = Object.keys(this.itemRefs);
+    if (!scope) ids = ids.filter(id => id.split(GroupScopeSeparator).length === 1);
+    else ids = ids.filter(id => id.includes(scope));
+
+    let nodes = ids.filter(key => !(key == 'frame' || key == id))
       .map(key => {
         if (this.itemRefs[key]) {
           const { x, y } = this.itemRefs[key].getAbsoluteAppPosition();

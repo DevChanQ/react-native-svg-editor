@@ -104,6 +104,7 @@ class SvgItem extends React.PureComponent {
       attributes: { ...this._lastAttributes },
     };
 
+    this.onInit(this._initialAttributes);
     this._setupInternalGradient();
   }
   
@@ -567,7 +568,9 @@ class SvgItem extends React.PureComponent {
    * Called in constructor
    * @param {object} attributes Object that contains the initial attributes 
    */
-  onInit = (attributes) => {};
+  onInit = (attributes) => {
+    console.log('SvgItem.onInit: ', attributes);
+  };
 
   onResize = ({nativeEvent: {translationX, translationY}}) => {
     this.scale({translationX, translationY});
@@ -987,7 +990,7 @@ class SvgItem extends React.PureComponent {
         <Portal hostName="controlLayerPortal">
           <View pointerEvents='box-none' style={{
             position: 'absolute',
-            width, height, left: resizeBoxX, top: resizeBoxY
+            width, height, left: resizeBoxX, top: resizeBoxY,
           }}>
             { this.selected ? this.renderControlLayer() : null }
           </View>
@@ -1237,6 +1240,12 @@ class SvgTextItem extends SvgItem {
   valueRefreshed = true;
   manuallyEdited = false;
 
+  constructor(props) {
+    super(props);
+
+    this.onInit(this._initialAttributes);
+  }
+
   get text() {
     let children = this.props.info.toJS()['children'];
     return children?.filter(child => child.type === "text")[0]?.value || "";
@@ -1259,14 +1268,23 @@ class SvgTextItem extends SvgItem {
 
     attributes['appX'] = valueOrDefault(attributes['appX'], attributes['x'] || 0);
     attributes['appY'] = valueOrDefault(attributes['appY'], attributes['y'] || 0);
-    attributes['width'] = valueOrDefault(attributes['width'], 200);
-    attributes['height'] = valueOrDefault(attributes['height'], 80);
     attributes['font-size'] = valueOrDefault(attributes['font-size'], 16);
 
     attributes['text-shadow'] = valueOrDefault(attributes['text-shadow'], false);
 
     return attributes;
   }
+
+  _getSize() {
+    const {attributes: {width=100, height=100}} = this.state;
+    return {width, height};
+  }
+
+  onInit = (attributes) => {
+    if (attributes['width'] && attributes['height']) {
+      this.manuallyEdited = true;
+    }
+  };
 
   onValueRefreshed = (changed) => {
     this.valueRefreshed = true;
@@ -1295,15 +1313,6 @@ class SvgTextItem extends SvgItem {
     
     return super.toSvgson(external, info);
   }
-
-  getAppPosition() {
-    const {x, y} = super.getAppPosition();
-    return {x, y: y-this._baselineOffset};
-  }
-
-  // setPosition({ y, ...other }) {
-  //   return super.setPosition({ y: y+this._baselineOffset, ...other });
-  // }
 
   onDoubleTap() {
     this.setState({ editMode: !this.state.editMode });
