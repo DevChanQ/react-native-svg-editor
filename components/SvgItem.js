@@ -900,12 +900,8 @@ class SvgItem extends React.PureComponent {
           <View pointerEvents='none' style={[
             styles.sizeBox,
             {
-              // transform: [
-              //   {scale: scaleRatio},
-              //   {translateX: -sizeBoxRect.width * (1-scaleRatio)},
-              //   {translateY: -sizeBoxRect.height * (1-scaleRatio)},
-              // ],
               backgroundColor: this.locked ? '#B7B7B7' : this.controlColor,
+              left: (width - sizeBoxRect.width) / 2,
               bottom: -sizeBoxRect.height - 12,
             }
           ]}>
