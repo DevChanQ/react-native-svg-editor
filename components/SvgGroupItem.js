@@ -3,6 +3,8 @@ import React from 'react';
 import SvgItem, { SvgEmptyItem, GroupScopeSeparator } from './SvgItem';
 import { valueOrDefault } from '../utils';
 
+import {Group} from "@shopify/react-native-skia";
+
 const excludeAttributes = ["devjeff:width", "devjeff:height", "devjeff:x", "devjeff:y", "appX", "appY"];
 
 class SvgGroupItem extends SvgItem {
@@ -169,7 +171,11 @@ class SvgGroupItem extends SvgItem {
       );
     })
 
-    return children;
+    return (
+      <Group>
+        {children}
+      </Group>
+    );
   }
 }
 

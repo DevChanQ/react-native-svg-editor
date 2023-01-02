@@ -8,6 +8,8 @@ import { PortalProvider, PortalHost } from '@gorhom/portal';
 import { parse as svgsonParse, stringify } from 'svgson';
 import { fromJS } from 'immutable';
 
+import { Canvas as SkiaCanvas, useTouchHandler } from "@shopify/react-native-skia";
+
 import {
   SvgLineItem,
   SvgRectItem,
@@ -109,6 +111,27 @@ const ITEM_MAPPING = {
   img: SvgImageItem,
 };
 
+
+const Canvas = ({ onTouch, children, ...props }) => {
+  const touchHandler = useTouchHandler({
+    onStart: (event) => {
+
+    },
+    onActive: (event) => {
+      const {x, y} = event;
+      console.log(event)
+      onTouch({x, y});
+    },
+  }, [onTouch]);
+
+  return (
+    <SkiaCanvas
+      onTouch={touchHandler}  
+      {...props}>
+      {children}
+    </SkiaCanvas>
+  );
+}
 
 class SvgEditor extends React.PureComponent {
   state = {
@@ -777,6 +800,10 @@ class SvgEditor extends React.PureComponent {
     this.setState({scale});
   };
 
+  onTouch = (pos) => {
+    console.log(pos);
+  }
+
   renderGuidelines() {
     return (
       <>
@@ -831,7 +858,7 @@ class SvgEditor extends React.PureComponent {
 
             <View pointerEvents='none' style={styles.frame} />
 
-            <ViewShot ref={this.viewShot} options={{format: 'jpg'}}>
+            {/* <ViewShot ref={this.viewShot} options={{format: 'jpg'}}>
               <View style={{width, height}}></View>
               <View onLayout={this._onEditorLayout} style={styles.svgs}>
                 {svgs}
@@ -844,7 +871,13 @@ class SvgEditor extends React.PureComponent {
               }
               { this.renderGuidelines() }
               <PortalHost name="controlLayerPortal" />
-            </ViewShot>
+            </ViewShot> */}
+
+            <Canvas
+              style={{width, height}}
+              onTouch={this.onTouch}>
+              {svgs}
+            </Canvas>
           </View>
         </PinchZoomView>
       </PortalProvider>

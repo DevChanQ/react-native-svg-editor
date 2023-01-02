@@ -11,7 +11,7 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
-import Svg, { SvgXml, SvgCss, Path } from "react-native-svg";
+import { SvgXml } from "react-native-svg";
 import { State, PanGestureHandler, PinchGestureHandler, TapGestureHandler } from 'react-native-gesture-handler';
 import RNFS from 'react-native-fs';
 import { stringify } from "svgson";
@@ -21,6 +21,8 @@ import { fromJS } from 'immutable';
 import cssParser from '../utils/css';
 import { mergeDeep, valueOrDefault } from '../utils';
 import GradientControlLayer from './SvgItemControlLayer/GradientControlLayer';
+
+import { Canvas, RoundedRect } from "@shopify/react-native-skia";
 
 const sizeBoxRect = { width: 98, height: 26 };
 
@@ -701,9 +703,10 @@ class SvgItem extends React.PureComponent {
    */
   transform(a) {
     let attributes = { ...a };
-    if (attributes['fill']?.url) {
-      attributes['fill'] = `url(${attributes['fill'].url})`;
-    }
+    // if (attributes['fill']?.url) {
+    //   attributes['fill'] = `url(${attributes['fill'].url})`;
+    // }
+    attributes['color'] = attributes['fill'];
     
     return attributes;
   }
@@ -946,22 +949,8 @@ class SvgItem extends React.PureComponent {
     this._calculateInternalScale();
 
     return (
-      <View style={{
-        position: 'absolute',
-        width, height, left, top,
-        opacity: this.isTransparent ? 0.5 : 1,
-        transform: [
-          {skewX: `${skewX}deg`},
-          {skewY: `${skewY}deg`},
-
-          {translateX: -width/2},
-          {translateY: -height/2},
-          {rotate: `${rotate}deg`},
-          {translateX: width/2},
-          {translateY: height/2},
-        ]
-      }}>
-        <TapGestureHandler
+      <>
+        {/* <TapGestureHandler
           ref={this._doubleTapRef}
           enabled={!this.locked && !this.disabled}
           onHandlerStateChange={this._onDoubleTap}
@@ -972,26 +961,23 @@ class SvgItem extends React.PureComponent {
             maxPointers={1}
             onGestureEvent={this.onPan}
             onHandlerStateChange={this.onPanStateChanged}>
-            <View style={{
-              width: '100%', height: '100%',
-              transform: [{scaleX}, {scaleY},],
-            }}>
 
-              {this.renderContent()}
 
-            </View>
           </PanGestureHandler>
-        </TapGestureHandler>
+        </TapGestureHandler> */}
 
-        <Portal hostName="controlLayerPortal">
+
+        {this.renderContent()}
+
+        {/* <Portal hostName="controlLayerPortal">
           <View pointerEvents='box-none' style={{
             position: 'absolute',
             width, height, left: resizeBoxX, top: resizeBoxY,
           }}>
             { this.selected ? this.renderControlLayer() : null }
           </View>
-        </Portal>
-      </View>
+        </Portal> */}
+      </>
     );
   }
 }
@@ -1089,6 +1075,14 @@ class SvgRectItem extends SvgItem {
     attributes['y'] = attributes['appY'];
     
     return super.toSvgson(external, info);
+  }
+
+  renderContent() {
+    let {attributes} = this.state;
+
+    return (
+      <RoundedRect {...this.transform(attributes)} />
+    )
   }
 }
 
