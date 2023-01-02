@@ -130,11 +130,6 @@ class SvgEditor extends React.PureComponent {
     watermark: null,
   };
 
-  exportSize = {
-    width: 0,
-    height: 0,
-  }
-
   history = [];
   clipboard = null;
 
@@ -286,11 +281,6 @@ class SvgEditor extends React.PureComponent {
 
     return svgson;
   }
-
-  _onEditorLayout = ({nativeEvent: { layout: {width, height} }}) => {
-    // set export local(display) size 
-    this.exportSize = { width, height };
-  };
 
   _createElement(ele) {
     return {...ele, id: ele.attributes.id || makeid(5)};
@@ -539,7 +529,7 @@ class SvgEditor extends React.PureComponent {
    * @returns {Promise} Promise that resolves to the uri of the exported image
    */
   export(options = {}) {
-    const {preview, watermark, ...config} = options;
+    const {preview, watermark, scale=1, ...config} = options;
 
     this.setState({
       selected: null,
@@ -551,16 +541,24 @@ class SvgEditor extends React.PureComponent {
     // capture canvas next tick (after 'deselect' action)
     return new Promise(resolve => {
       setTimeout(() => {
-        let {width, height} = this.exportSize;
+        let {width, height} = this.canvasSize, canvasAspect = width / height;
+        let quality = 1, format = "png";
+        
+        // resize according to export scale
+        width *= scale / PixelRatio.get();
+        height *= scale / PixelRatio.get();
+
+        // set config for preview
         if (preview) {
-          width /= 2;
-          height /= 2;
+          quality = 0.2;
+          format = "jpg";
+
+          width = 200;
+          height = width / canvasAspect;
         }
 
         captureRef(this.viewShot.current, {
-          format: 'png',
-          width: width / PixelRatio.get(),
-          height: height / PixelRatio.get(),
+          format, quality, width, height,
           ...config,
         }).then(uri => {
           this.setState({ watermark: null });
@@ -833,7 +831,7 @@ class SvgEditor extends React.PureComponent {
 
             <ViewShot ref={this.viewShot} options={{format: 'jpg'}}>
               <View style={{width, height}}></View>
-              <View onLayout={this._onEditorLayout} style={styles.svgs}>
+              <View style={styles.svgs}>
                 {svgs}
               </View>
               {

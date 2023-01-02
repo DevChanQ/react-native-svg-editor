@@ -20,6 +20,8 @@ const documentDirectoryPath = `file://${RNFS.DocumentDirectoryPath}`;
 export const fontsFolderRelativePath = `fonts`;
 export const fontsFolderAbsolutePath = `${documentDirectoryPath}/${fontsFolderRelativePath}`;
 
+const remoteFontFetchOrigin = "https://gwfh.mranftl.com";
+
 class SvgEditorManagerObject {
 
   remoteFonts = null;
@@ -45,7 +47,7 @@ class SvgEditorManagerObject {
   }
 
   async listRemoteFontsFromGoogle() {
-    const url = "https://google-webfonts-helper.herokuapp.com/api/fonts";
+    const url = `${remoteFontFetchOrigin}/api/fonts`;
 
     if (!this.remoteFonts) {
       const fonts = await fetch(url)
@@ -74,7 +76,7 @@ class SvgEditorManagerObject {
       return this.loadedFonts[fontId];
     }
 
-    const url = `https://google-webfonts-helper.herokuapp.com/api/fonts/${fontId}?subsets=latin,latin-ext`;
+    const url = `${remoteFontFetchOrigin}/api/fonts/${fontId}?subsets=latin,latin-ext`;
 
     const { variants=[] } = await fetch(url).then((response) => response.json());
 
