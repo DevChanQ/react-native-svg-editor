@@ -133,15 +133,15 @@ class SvgEditor extends React.PureComponent {
   history = [];
   clipboard = null;
 
+  rawSvg = null;
   svgson = null;
+
+  canvasContext = {};
+
+
+  /** React refs */
   viewShot = React.createRef();
   pinchZoomViewRef = React.createRef();
-
-  /** filters definition */
-  filters = [];
-
-  /** gradient definition */
-  gradients = [];
 
   // guidelines
   _disableGuideline = false;
@@ -219,10 +219,14 @@ class SvgEditor extends React.PureComponent {
     // TODO: clean svgson
     let svgson = await svgsonParse(svg);
 
+    this.canvasContext = {
+      gradients: [],
+      defs: [],
+    };
+
     let exclude = ['defs', 'style', 'filter'];
 
     // prepare def elements and style elements
-    this.filters = svgson.children.filter(child => child.name === 'filter');
     let styleElements = svgson.children.filter(child => child.name === 'style');
     const defElements = svgson.children.filter(child => child.name === 'defs');
     for (let defEle of defElements) {
@@ -230,10 +234,11 @@ class SvgEditor extends React.PureComponent {
       styleElements = styleElements.concat(childElements.filter(child => child.name === 'style'));
 
       // set svg gradient definitions
-      this.gradients = this.gradients.concat(childElements.filter(child => child.name === 'linearGradient'));
+      // this.canvasContext.gradients = this.canvasContext.gradients.concat(childElements.filter(child => child.name === 'linearGradient'));
 
-      // set svg global filter
-      this.filters = this.filters.concat(childElements.filter(child => child.name === 'filter'));
+      this.canvasContext.defs = this.canvasContext.defs.concat(
+        childElements.filter(child => !['style'].includes(child.name))
+      );
     }
 
     // Parse embedded stylesheet
@@ -289,6 +294,8 @@ class SvgEditor extends React.PureComponent {
   _init() {
     const {svg} = this.props;
     if (svg) {
+      this.rawSvg = svg;
+
       this._parseSvg(svg).then(svgson => {
         this.svgson = fromJS(svgson);
 
@@ -313,17 +320,6 @@ class SvgEditor extends React.PureComponent {
         });
       });
     }
-  }
-
-  _getFilters = selector => {
-    let isId = selector[0] === '#', name = selector.substring(1);
-    if (isId) {
-      let filters = this.filters.filter(filter => filter.attributes['id'] == name);
-      console.log('SvgEditor._getFilters: ', filters, this.filters);
-      return filters
-    }
-
-    return [];
   }
 
   /**
@@ -427,13 +423,13 @@ class SvgEditor extends React.PureComponent {
         /** elements in SvgEditor are all roots */
         scale={scale}
         showSize={showSize}
-        gradients={this.gradients}
         itemMapping={this.elementMapping}
+
+        canvasContext={this.canvasContext}
         
         onTap={this._onTap}
         onPanEnded={this._removeGuidelines}
         offsetPositionToGuideline={this._offsetPositionToGuideline}
-        getFilters={this._getFilters}
         setElementById={this.setElementById}
         setScope={this.setScope}
         setCanvasItemRef={this.setItemRef} />
@@ -529,7 +525,7 @@ class SvgEditor extends React.PureComponent {
    * @returns {Promise} Promise that resolves to the uri of the exported image
    */
   export(options = {}) {
-    const {preview, watermark, scale=1, ...config} = options;
+    let {preview, watermark, scale=1, format="png", quality=1, ...config} = options;
 
     this.setState({
       selected: null,
@@ -542,17 +538,14 @@ class SvgEditor extends React.PureComponent {
     return new Promise(resolve => {
       setTimeout(() => {
         let {width, height} = this.canvasSize, canvasAspect = width / height;
-        let quality = 1, format = "png";
         
         // resize according to export scale
-        width *= scale / PixelRatio.get();
-        height *= scale / PixelRatio.get();
+        const pixelRatio = Platform.OS === "android" ? 1 : PixelRatio.get();
+        width *= scale / pixelRatio;
+        height *= scale / pixelRatio;
 
         // set config for preview
         if (preview) {
-          quality = 0.2;
-          format = "jpg";
-
           width = 200;
           height = width / canvasAspect;
         }
@@ -610,7 +603,10 @@ class SvgEditor extends React.PureComponent {
       name: 'defs',
       type: 'element',
       value: '',
-      children: gradients,
+      children: [
+        ...gradients,
+        ...this.canvasContext.defs,
+      ],
     };
 
     // insert defs to front
@@ -626,6 +622,8 @@ class SvgEditor extends React.PureComponent {
     console.log('SvgEditor.exportSvg(): ' + svg);
     return svg;
   }
+
+  /** Editor functions */
 
   scaleToFit() {
     this.pinchZoomViewRef.current.scaleToFit();
@@ -845,6 +843,7 @@ class SvgEditor extends React.PureComponent {
             </ViewShot>
           </View>
         </PinchZoomView>
+
       </PortalProvider>
     )
   }

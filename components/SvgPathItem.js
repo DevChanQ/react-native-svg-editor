@@ -129,7 +129,7 @@ class SvgPathItem extends SvgItem {
   };
 
   onDoubleTap() {
-    this.setState({ editMode: !this.state.editMode });
+    // this.setState({ editMode: !this.state.editMode });
   }
 
   updatePath(updateLocation=false) {

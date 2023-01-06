@@ -18,11 +18,14 @@ import { stringify } from "svgson";
 import { Portal } from '@gorhom/portal';
 import { fromJS } from 'immutable';
 
-import cssParser from '../utils/css';
+import { styleToAttributes } from '../utils/svgParse';
 import { mergeDeep, valueOrDefault } from '../utils';
 import GradientControlLayer from './SvgItemControlLayer/GradientControlLayer';
 
 const sizeBoxRect = { width: 98, height: 26 };
+const resizeBoxHitboxSize = 26;
+const resizeBoxHitboxDisplaySize = 12;
+const resizeBoxCenterOffset = (resizeBoxHitboxSize / 2 + ((resizeBoxHitboxSize - resizeBoxHitboxDisplaySize) / 2)) - resizeBoxHitboxDisplaySize/2;
 
 const styles = StyleSheet.create({
   absolute: {
@@ -34,14 +37,14 @@ const styles = StyleSheet.create({
   },
   resizeBoxHitbox: {
     position: 'absolute',
-    width: 26,
-    height: 26,
-    right: -26,
-    bottom: -26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: resizeBoxHitboxSize,
+    height: resizeBoxHitboxSize,
   },
   resizeBox: {
-    width: 12,
-    height: 12,
+    width: resizeBoxHitboxDisplaySize,
+    height: resizeBoxHitboxDisplaySize,
     borderWidth: 1,
     backgroundColor: 'white',
   },
@@ -105,7 +108,7 @@ class SvgItem extends React.PureComponent {
     };
 
     this.onInit(this._initialAttributes);
-    this._setupInternalGradient();
+    // this._setupInternalGradient();
   }
   
   componentDidUpdate({info}) {
@@ -257,23 +260,6 @@ class SvgItem extends React.PureComponent {
   }
 
   /**
-   * Getter for filter
-   */
-  get filters() {
-    let filter = this.state.attributes['filter'];
-    if (filter) {
-      let selector = filter.split('(')[1].slice(0, -1);
-
-      if (this.props.getFilters) {
-        let filters = this.props.getFilters(selector);
-        console.log('SvgItem.filters: ', selector, filters)
-        return filters;
-      }
-    }
-    return [];
-  }
-
-  /**
    * Get svgson of the SvgItem. Called when exporting to svg. Cleans attributes (remove internal attributes)
    * @param {Boolean} external Indicate whether the svgson object should be cleaned for external use or not
    * @returns {object,Promise} cleaned svgson object / Promise that resolves to svgson object
@@ -330,7 +316,7 @@ class SvgItem extends React.PureComponent {
     // Inline css style trumps attributes for priority
     // https://stackoverflow.com/questions/24293880/svg-why-does-external-css-override-inline-style-for-text
     if (attributes['style']) {
-      const parsedCss = cssParser.parseCSS(`#temp { ${attributes['style']} }`), rules = parsedCss[0]?.rules || [];
+      const rules = styleToAttributes(attributes['style']);
       for (let rule of rules) attributes[rule.directive] = rule.value;
       delete attributes['style'];
     }
@@ -817,6 +803,8 @@ class SvgItem extends React.PureComponent {
     let {attributes: propsAttributes} = this.props.info.toObject();
 
     if (!this._cachedXML || !propsAttributes.equals(attributes)) {
+      const { defs=[] } = this.props.canvasContext;
+
       this._cachedXML =  stringify({
         name: 'svg',
         type: 'element',
@@ -830,7 +818,7 @@ class SvgItem extends React.PureComponent {
             name: 'defs',
             type: 'element',
             value: '',
-            children: this.internalGradientSvgson,
+            children: defs,
           },
           {
             ...this.props.info.toJS(),
@@ -886,13 +874,15 @@ class SvgItem extends React.PureComponent {
         ]}>
         {
           !this.locked ? (
-            <PanGestureHandler
-              onGestureEvent={this.onResize}
-              onHandlerStateChange={this.onResizeStateChanged}>
-              <View pointerEvents='auto' style={styles.resizeBoxHitbox}>
-                <View style={[styles.resizeBox, { borderColor: this.locked ? '#B7B7B7' : this.controlColor }]} />
-              </View>
-            </PanGestureHandler>
+            <>
+              <PanGestureHandler
+                onGestureEvent={this.onResize}
+                onHandlerStateChange={this.onResizeStateChanged}>
+                <View pointerEvents='auto' style={[styles.resizeBoxHitbox, {right: -resizeBoxCenterOffset,bottom: -resizeBoxCenterOffset}]}>
+                  <View style={[styles.resizeBox, { borderColor: this.locked ? '#B7B7B7' : this.controlColor }]} />
+                </View>
+              </PanGestureHandler>
+            </>
           ) : null
         }
         { 
@@ -1523,7 +1513,7 @@ SvgItem.defaultProps = {
   selected: false,
   scale: 1,
   /** Gradients elements svgson */
-  gradients: [],
+  canvasContext: {},
   relativeOffset: { x: 0, y: 0 },
   absoluteOffset: { x: 0, y: 0 },
 };

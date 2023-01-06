@@ -1,4 +1,5 @@
 import React from 'react';
+import { View } from 'react-native';
 
 import SvgItem, { SvgEmptyItem, GroupScopeSeparator } from './SvgItem';
 import { valueOrDefault } from '../utils';
@@ -169,7 +170,16 @@ class SvgGroupItem extends SvgItem {
       );
     })
 
-    return children;
+    const { attributes } = this.state;
+    const style = {
+      opacity: attributes['opacity'],
+    }
+
+    return (
+      <View style={style}>
+        {children}
+      </View>
+    );
   }
 }
 
