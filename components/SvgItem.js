@@ -10,6 +10,7 @@ import {
   Image,
   Platform,
   ActivityIndicator,
+  Dimensions,
 } from 'react-native';
 import Svg, { SvgXml, SvgCss, Path } from "react-native-svg";
 import { State, PanGestureHandler, PinchGestureHandler, TapGestureHandler } from 'react-native-gesture-handler';
@@ -18,7 +19,7 @@ import { stringify } from "svgson";
 import { Portal } from '@gorhom/portal';
 import { fromJS } from 'immutable';
 
-import { styleToAttributes } from '../utils/svgParse';
+import { styleToAttributes, commaWspRegex } from '../utils/svgParse';
 import { mergeDeep, valueOrDefault } from '../utils';
 import GradientControlLayer from './SvgItemControlLayer/GradientControlLayer';
 
@@ -337,20 +338,25 @@ class SvgItem extends React.PureComponent {
       for (let transform of transforms) {
         let [command, values] = transform.split("(");
         command = command.replace(/\s/g, "");
-        values = values.split(" ");
+        values = values.replaceAll(commaWspRegex, ",").split(",").filter(v => v).map(v => parseFloat(v));
 
         if (command === 'rotate') {
-          attributes['devjeff:rotate'] = parseFloat(values[0]);
+          attributes['devjeff:rotate'] = valueOrDefault(values[0], 0);
         } else if (command === 'translate') {
-          attributes['devjeff:translateX'] = valueOrDefault(parseFloat(values[0]), 0);
-          attributes['devjeff:translateY'] = valueOrDefault(parseFloat(values[1]), 0);
+          attributes['devjeff:translateX'] = valueOrDefault(values[0], 0);
+          attributes['devjeff:translateY'] = valueOrDefault(values[1], 0);
         } else if (command === 'scale') {
-          attributes['devjeff:scaleX'] = valueOrDefault(parseFloat(values[0]), 1);
-          attributes['devjeff:scaleY'] = valueOrDefault(parseFloat(values[1]), 1);
+          attributes['devjeff:scaleX'] = valueOrDefault(values[0], 1);
+          attributes['devjeff:scaleY'] = valueOrDefault(values[1], attributes['devjeff:scaleX']);
         } else if (command === 'skewX') {
-          attributes['devjeff:skewX'] = parseFloat(values[0]);
+          attributes['devjeff:skewX'] = values[0];
         } else if (command === 'skewY') {
-          attributes['devjeff:skewY'] = parseFloat(values[0]);
+          attributes['devjeff:skewY'] = values[0];
+        } else if (command === 'matrix') {
+          attributes['devjeff:scaleX'] = valueOrDefault(values[0], 1);
+          attributes['devjeff:scaleY'] = valueOrDefault(values[3], 1);
+          attributes['devjeff:translateX'] = valueOrDefault(values[4], 0);
+          attributes['devjeff:translateY'] = valueOrDefault(values[5], 0);
         }
       }
 
@@ -433,10 +439,12 @@ class SvgItem extends React.PureComponent {
 
   _calculateInternalScale() {
     // set interal scale
+    const window = Dimensions.get("window");
+
     const MAX_SCALE = Platform.select({ 'android': 5, 'ios': 15 }), MIN_SCALE = 0.2
     const {width, height} = this.getSize();
-    const pixels = width * height * PixelRatio.get();
-    const pixelLimit = 512 * 512
+    const pixels = width * height;
+    const pixelLimit = window.width * window.height;
 
     this._internalScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, pixelLimit / pixels));
   }
@@ -912,8 +920,8 @@ class SvgItem extends React.PureComponent {
     let {rotate, scaleX, scaleY, skewX, skewY} = this.transformAttributes;
     let left = relativeX, top = relativeY;
 
-    if (Number.isNaN(width) || Number.isNaN(height)) {
-      console.warn("getSize returned size object with NaN, setting width and height to 0 to avoid react native error");
+    if (!(typeof width === 'number' && typeof height === 'number')) {
+      console.warn("getSize returned size object that contains non-number values, setting width and height to 0 to avoid react native error");
       console.warn(`Please investigate problem`, `id - ${this.props.id}`, this.getSize());
       width = 0; height = 0;
     }
@@ -1254,7 +1262,7 @@ class SvgTextItem extends SvgItem {
 
     attributes['appX'] = valueOrDefault(attributes['appX'], attributes['x'] || 0);
     attributes['appY'] = valueOrDefault(attributes['appY'], attributes['y'] || 0);
-    attributes['font-size'] = valueOrDefault(attributes['font-size'], 16);
+    attributes['font-size'] = valueOrDefault(parseFloat(attributes['font-size']), 16);
 
     attributes['text-shadow'] = valueOrDefault(attributes['text-shadow'], false);
 
