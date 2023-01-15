@@ -5,7 +5,6 @@ import {
   View,
   Text,
   TextInput,
-  StyleSheet,
   PixelRatio,
   Image,
   Platform,
@@ -22,53 +21,7 @@ import { fromJS } from 'immutable';
 import { styleToAttributes, commaWspRegex } from '../utils/svgParse';
 import { mergeDeep, valueOrDefault } from '../utils';
 import GradientControlLayer from './SvgItemControlLayer/GradientControlLayer';
-
-const sizeBoxRect = { width: 98, height: 26 };
-const resizeBoxHitboxSize = 26;
-const resizeBoxHitboxDisplaySize = 12;
-const resizeBoxCenterOffset = (resizeBoxHitboxSize / 2 + ((resizeBoxHitboxSize - resizeBoxHitboxDisplaySize) / 2)) - resizeBoxHitboxDisplaySize/2;
-
-const styles = StyleSheet.create({
-  absolute: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-  },
-  resizeBoxHitbox: {
-    position: 'absolute',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: resizeBoxHitboxSize,
-    height: resizeBoxHitboxSize,
-  },
-  resizeBox: {
-    width: resizeBoxHitboxDisplaySize,
-    height: resizeBoxHitboxDisplaySize,
-    borderWidth: 1,
-    backgroundColor: 'white',
-  },
-  boundingBox: {
-    position: 'absolute',
-    right: 0,
-    bottom: 0,
-    left: 0,
-    top: 0,
-    borderWidth: 1,
-  },
-  sizeBox: {
-    position: 'absolute',
-    ...sizeBoxRect,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sizeText: {
-    color: 'white',
-    fontSize: 10
-  }
-});
+import ResizeControlLayer from './SvgItemControlLayer/ResizeControlLayer';
 
 export const ROOT_ELEMENT_ID = 'root';
 const EMPTY_OBJECT = {};
@@ -113,7 +66,6 @@ class SvgItem extends React.PureComponent {
   }
   
   componentDidUpdate({info}) {
-    console.log('SvgItem.conponentDidUpdate(): ', this.props.id);
     const {info: newInfo, id} = this.props;
 
     // update internal state if new props is provided
@@ -122,6 +74,9 @@ class SvgItem extends React.PureComponent {
 
       const newAttributes = newInfo.get('attributes'), oldAttributes = info.get('attributes');
       this._attrDiff = newAttributes.filter((v, k) => oldAttributes.get(k) !== v);
+
+      console.log('SvgItem.attrDiff', this._attrDiff);
+
       this.refreshValues();
     } else if (this._stateRefreshed) {
       console.log(`SvgItem (${id}): state refreshed and updated, call _onRefresh`);
@@ -157,6 +112,11 @@ class SvgItem extends React.PureComponent {
   // boolean flag getters
   get translateEnabled() {
     return !this.locked && this.selected && !this.isEditingGradient;
+  }
+
+  /** whether to show size box or not */
+  get shouldShowSize() {
+    return this.props.showSize;
   }
 
   get isRoot() {
@@ -258,6 +218,14 @@ class SvgItem extends React.PureComponent {
       'skewY': this.state.attributes['devjeff:skewY'] || 0,
       'matrix': this.state.attributes['devjeff:matrix'] || [],
     }
+  }
+
+  get canvasContext() {
+    return this.props.canvasContext || {};
+  }
+
+  get canvasSize() {
+    return this.canvasContext.canvasSize;
   }
 
   /**
@@ -542,6 +510,14 @@ class SvgItem extends React.PureComponent {
     }
   }
 
+  setCurrentAttributes = (history=true) => {
+    if (history) {
+      this.setElement({attributes: this.state.attributes});
+    } else {
+      this._lastAttributes = mergeDeep(this._lastAttributes, this.state.attributes);
+    }
+  }
+
   /**
    * Update attribute localy
    * @param {object} obj Attribute object
@@ -811,7 +787,7 @@ class SvgItem extends React.PureComponent {
     let {attributes: propsAttributes} = this.props.info.toObject();
 
     if (!this._cachedXML || !propsAttributes.equals(attributes)) {
-      const { defs=[] } = this.props.canvasContext;
+      const { defs=[] } = this.canvasContext;
 
       this._cachedXML =  stringify({
         name: 'svg',
@@ -860,10 +836,9 @@ class SvgItem extends React.PureComponent {
   }
 
   renderControlLayer() {
-    const {width, height} = this.getSize(), scale = this.getScale();
-    const {showSize} = this.props;
-
     if (this.isEditingGradient) {
+      const scale = this.getScale();
+
       return (
         <GradientControlLayer
           scale={scale}
@@ -874,39 +849,7 @@ class SvgItem extends React.PureComponent {
     }
 
     return (
-      <View
-        pointerEvents='box-none'
-        style={[
-          styles.boundingBox,
-          { borderColor: this.locked ? '#B7B7B7' : this.controlColor }
-        ]}>
-        {
-          !this.locked ? (
-            <>
-              <PanGestureHandler
-                onGestureEvent={this.onResize}
-                onHandlerStateChange={this.onResizeStateChanged}>
-                <View pointerEvents='auto' style={[styles.resizeBoxHitbox, {right: -resizeBoxCenterOffset,bottom: -resizeBoxCenterOffset}]}>
-                  <View style={[styles.resizeBox, { borderColor: this.locked ? '#B7B7B7' : this.controlColor }]} />
-                </View>
-              </PanGestureHandler>
-            </>
-          ) : null
-        }
-        { 
-          !showSize ? null :
-          <View pointerEvents='none' style={[
-            styles.sizeBox,
-            {
-              backgroundColor: this.locked ? '#B7B7B7' : this.controlColor,
-              left: (width - sizeBoxRect.width) / 2,
-              bottom: -sizeBoxRect.height - 12,
-            }
-          ]}>
-            <Text numberOfLines={1} style={styles.sizeText}>{`${width.toFixed(1)} x ${height.toFixed(1)}`}</Text>
-          </View>
-        }
-      </View>
+      <ResizeControlLayer elementRef={this} />
     );
   }
 
@@ -982,12 +925,14 @@ class SvgItem extends React.PureComponent {
         </TapGestureHandler>
 
         <Portal hostName="controlLayerPortal">
+
           <View pointerEvents='box-none' style={{
             position: 'absolute',
             width, height, left: resizeBoxX, top: resizeBoxY,
           }}>
             { this.selected ? this.renderControlLayer() : null }
           </View>
+          
         </Portal>
       </View>
     );

@@ -21,6 +21,8 @@ class SvgPathItem extends SvgItem {
   _lastKY = 1;
   _malformedPath = false;
 
+  customControlLayer = true;
+
   get translateEnabled() {
     return !this.state.editMode && super.translateEnabled;
   }
@@ -176,17 +178,26 @@ class SvgPathItem extends SvgItem {
    * @returns {object} rect object
    */
   getBoundingBox(path) {
-    let [x0, y0, x1, y1] = getBBox(path);
-
-    let width = x1-x0, height = y1-y0;
-
-    const rect = {
-      width, height,
-      left: x0, top: y0, right: x1, bottom: y1,
+    let rect = {
+      width: 0, height: 0,
+      left: 0, top: 0, right: 0, bottom: 0
     };
 
-    for (let key in rect) {
-      rect[key] = parseFloat(rect[key].toFixed(2));
+    try {
+      let [x0, y0, x1, y1] = getBBox(path);
+
+      let width = x1-x0, height = y1-y0;
+
+      rect = {
+        width, height,
+        left: x0, top: y0, right: x1, bottom: y1,
+      };
+
+      for (let key in rect) {
+        rect[key] = parseFloat(rect[key].toFixed(2));
+      }
+    } catch (e) {
+
     }
 
     return rect;
@@ -243,18 +254,6 @@ class SvgPathItem extends SvgItem {
       return super.renderControlLayer();
     }
 
-    let {
-      width = 0,
-      height = 0,
-    } = attributes;
-    let ogWidth = width,
-        ogHeight = height;
-  
-    width *= this._internalScale;
-    height *= this._internalScale;
-  
-    let svgScale = 1/this._internalScale, translateX = -((width - ogWidth)/2), translateY = -((height - ogHeight)/2);
-
     return (
       <PathEditLayer
         scale={Math.max(scale, 0.1)}
@@ -262,7 +261,6 @@ class SvgPathItem extends SvgItem {
         updateTargetPoint={this.updateTargetPoint}
         onTap={this.onTap}
         onPanEnd={this.onEditEnd}
-        lineStyle={{width, height, left: translateX, top: translateY, transform: [{scale: svgScale}]}}
         startPoint={this.startPoint}
         parsedPath={this.parsedPath} />
     )

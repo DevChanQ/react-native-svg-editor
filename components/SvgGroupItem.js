@@ -37,6 +37,10 @@ class SvgGroupItem extends SvgItem {
   _initAttributes(a) {
     let attributes = super._initAttributes(a);
 
+    if (this.isRoot) {
+      return attributes;
+    }
+
     // initialize app position if undefined
     if (attributes['appX'] === undefined || attributes['appY'] === undefined || this._shouldRefreshRect) {
       let coors = this.getChildrenCoors();

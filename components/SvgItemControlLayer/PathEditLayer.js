@@ -1,10 +1,15 @@
 import React, { useCallback } from 'react';
 import { View, StyleSheet } from 'react-native';
 import ReactSvg, { Line } from 'react-native-svg';
+import { PanGestureHandler, State } from 'react-native-gesture-handler';
 
 import MemorisedPan from './MemorisedPan';
 
 const styles = StyleSheet.create({
+  absolute: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'black',
+  },
   targetPointContainer: {
     position: 'absolute',
     width: 16,
@@ -104,6 +109,16 @@ class PathEditLayer extends React.PureComponent {
     return this.props.lineStyle || {};
   }
 
+  onPanStateChanged = ({ nativeEvent }) => {
+    console.log(nativeEvent);
+  };
+
+  onPan = ({ nativeEvent: event }) => {
+    console.log(event);
+    // panning.current = true;
+    // onPan({ event, last: lastAttributes.current });
+  };
+
   render() {
     console.log('PathEditLayer.render');
     
@@ -155,15 +170,21 @@ class PathEditLayer extends React.PureComponent {
     const {startPoint={x: 0, y: 0}} = pointProps;
 
     return (
-      <View style={styles.absolute}>
-        <ReactSvg style={[{position: 'absolute'}, this.lineStyle]} viewBox={viewBox}>
-          { controlPointLines }
-        </ReactSvg>
-        <View style={{transform: [{translateX: -startPoint.x}, {translateY: -startPoint.y}]}}>
-          { targetPoints }
-          { controlPoints }
+      <PanGestureHandler
+        onHandlerStateChange={this.onPanStateChanged}
+        onGestureEvent={this.onPan}>
+        
+        <View style={styles.absolute}>
+          <ReactSvg style={[{position: 'absolute'}, this.lineStyle]} viewBox={viewBox}>
+            { controlPointLines }
+          </ReactSvg>
+          <View style={{transform: [{translateX: -startPoint.x}, {translateY: -startPoint.y}]}}>
+            { targetPoints }
+            { controlPoints }
+          </View>
         </View>
-      </View>
+
+      </PanGestureHandler>
     );
   }
 

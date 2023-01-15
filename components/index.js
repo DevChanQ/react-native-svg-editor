@@ -136,7 +136,7 @@ class SvgEditor extends React.PureComponent {
   rawSvg = null;
   svgson = null;
 
-  canvasContext = {};
+  _canvasContext = {};
 
 
   /** React refs */
@@ -211,6 +211,13 @@ class SvgEditor extends React.PureComponent {
     return this.props.options;
   }
 
+  get canvasContext() {
+    return {
+      ...this._canvasContext,
+      canvasSize: this.canvasSize,
+    }
+  }
+
   /**
    * Parse Svg string to svgson and clean unwanted data
    * @returns 
@@ -219,7 +226,7 @@ class SvgEditor extends React.PureComponent {
     // TODO: clean svgson
     let svgson = await svgsonParse(svg);
 
-    this.canvasContext = {
+    this._canvasContext = {
       gradients: [],
       defs: [],
     };
@@ -233,10 +240,8 @@ class SvgEditor extends React.PureComponent {
       let childElements = defEle.children;
       styleElements = styleElements.concat(childElements.filter(child => child.name === 'style'));
 
-      // set svg gradient definitions
-      // this.canvasContext.gradients = this.canvasContext.gradients.concat(childElements.filter(child => child.name === 'linearGradient'));
-
-      this.canvasContext.defs = this.canvasContext.defs.concat(
+      // set svg defs in canvas context
+      this._canvasContext.defs = this._canvasContext.defs.concat(
         childElements.filter(child => !['style'].includes(child.name))
       );
     }
