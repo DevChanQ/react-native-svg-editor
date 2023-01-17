@@ -81,6 +81,10 @@ const ResizeControlLayer = ({ elementRef }) => {
     elementRef.setAttributes({ "devjeff:locked": !elementRef.locked});
   }, [elementRef]);
 
+  const onToPath = useCallback(() => {
+    elementRef.asPath();
+  }, [elementRef]);
+
   return (
     <View
       pointerEvents='box-none'
@@ -107,9 +111,9 @@ const ResizeControlLayer = ({ elementRef }) => {
           </View>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={onLock}>
-          <View pointerEvents='auto' style={[styles.sideButton, { backgroundColor: elementRef.locked ? '#B7B7B7' : elementRef.controlColor }]}>
-            <MaterialCommunityIcon name={!elementRef.locked ? "lock" : "lock-open-variant"} size={17} color="#fff" />
+        <TouchableOpacity onPress={onToPath}>
+          <View pointerEvents='auto' style={[styles.sideButton, { backgroundColor: elementRef.controlColor }]}>
+            <MaterialCommunityIcon name="vector-curve" size={17} color="#fff" />
           </View>
         </TouchableOpacity>
       </View>
