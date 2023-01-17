@@ -11,10 +11,12 @@ import {
   ActivityIndicator,
   Dimensions,
 } from 'react-native';
-import Svg, { SvgXml, SvgCss, Path } from "react-native-svg";
+import Svg, { SvgXml } from 'react-native-svg';
+import { SvgEditorManager } from 'react-native-svg-editor';
 import { State, PanGestureHandler, PinchGestureHandler, TapGestureHandler } from 'react-native-gesture-handler';
 import RNFS from 'react-native-fs';
-import { stringify } from "svgson";
+import { stringify } from 'svgson';
+import toPath from 'element-to-path';
 import { Portal } from '@gorhom/portal';
 import { fromJS } from 'immutable';
 
@@ -68,6 +70,7 @@ class SvgItem extends React.PureComponent {
   componentDidUpdate({info}) {
     const {info: newInfo, id} = this.props;
 
+    console.log(`SvgItem.componentDidUpdate (${id})`)
     // update internal state if new props is provided
     if (!newInfo.equals(info)) {
       console.log(`SvgItem (${id}): props different, proceed to update internal state`);
@@ -518,6 +521,20 @@ class SvgItem extends React.PureComponent {
     }
   }
 
+  asPath = () => {
+    const svgson = this.toSvgson();
+    const path = toPath(svgson);
+    console.log('SvgItem.asPath: ', path);
+
+    this.setElement({
+      type: 'element',
+      name: 'path',
+      attributes: {
+        d: path,
+      }
+    });
+  };
+
   /**
    * Update attribute localy
    * @param {object} obj Attribute object
@@ -593,17 +610,7 @@ class SvgItem extends React.PureComponent {
   };
 
   onDoubleTap() {
-    // const svgson = this.toSvgson();
-    // const path = toPath(svgson);
-    // console.log(path);
-
-    // this.setElement({
-    //   type: 'element',
-    //   name: 'path',
-    //   attributes: {
-    //     d: path,
-    //   }
-    // });
+    // this.asPath();
   }
 
   /**
@@ -724,6 +731,7 @@ class SvgItem extends React.PureComponent {
 
   getParentViewBox() {
     const {width, height} = this.getSize(), {x, y} = this.getPosition();
+    console.log(x, y, width, height);
     return `${x} ${y} ${width} ${height}`;
   }
 
@@ -1251,6 +1259,24 @@ class SvgTextItem extends SvgItem {
     }
     
     return super.toSvgson(external, info);
+  }
+
+  asPath = () => {
+    let fontFamily = this.fontFamily || "OpenSans-Regular"
+    let fontWeight = this.fontWeight;
+    if (fontWeight == 100) fontFamily = fontFamily.replace('Regular', 'Light');
+    else if (fontWeight == 700) fontFamily = fontFamily.replace('Regular', 'Bold');
+
+    const path = SvgEditorManager.textToPath(this.text, fontFamily, this.fontSize);
+    // console.log('Text to Path: ', path)
+    this.setElement({
+      type: 'element',
+      name: 'path',
+      attributes: {
+        d: path,
+        x: 0, y: 0,
+      }
+    });
   }
 
   onDoubleTap() {
