@@ -1451,19 +1451,6 @@ class SvgImageItem extends SvgItem {
         source={imageSource} />
     );
   }
-
-  renderControlLayer() {
-    const controlLayer = super.renderControlLayer();
-
-    return (
-      <PinchGestureHandler
-        enabled={!this.locked && this.selected}
-        onHandlerStateChange={this._onPinchHandlerStateChange}
-        onGestureEvent={this._onPinchGestureEvent}>
-        { controlLayer }
-      </PinchGestureHandler>
-    )
-  }
 }
 
 class SvgUseItem extends SvgItem {

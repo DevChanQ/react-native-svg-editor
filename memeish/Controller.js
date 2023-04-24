@@ -31,8 +31,7 @@ const styles = StyleSheet.create({
   },
   displayText: {
     color: "#f2f2f7",
-    fontSize: 17,
-    lineHeight: 22,
+    fontSize: 14,
     fontWeight: 'bold',
   }
 })
@@ -57,6 +56,8 @@ const vibrateOptions = {
 };
 
 const blurType = "thinMaterialDark";
+
+const toFixed = (num, decimal=2) => parseFloat(num.toFixed(decimal));
 
 const Controller = ({
   control,
@@ -93,39 +94,37 @@ const Controller = ({
   }, [activated]);
 
   const onPan = useCallback(({ nativeEvent: { translationX, translationY } }) => {
-    let updatedAttributes = {};
-    let values = [];
+    const { damp=1 } = control;
+
+    let updatedAttributes = {}, values = [];
     if (control.prop[0]) {
-      let diff = translationX;
-      let setValue = Math.floor(lastValueX - diff);
+      let setValue = toFixed(lastValueX - translationX * damp);
       updatedAttributes[control.prop[0]] = setValue;
 
-      values.push(setValue);
+      values.push(Math.floor(setValue));
     } 
 
     if (control.prop[1]) {
-      let diff = translationY;
-      let setValue = Math.floor(lastValueY - diff);
+      let setValue = toFixed(lastValueY - translationY * damp);
       updatedAttributes[control.prop[1]] = setValue;
 
-      values.push(setValue);
+      values.push(Math.floor(setValue));
     }
 
-    setDisplayValue(`${values.join(',')}`);
+    setDisplayValue(values.join(','));
     updateSelected(updatedAttributes);
   }, [control, lastValueX, lastValueY]);
 
   const onPanStateChanged = useCallback(({ nativeEvent: { oldState, state, translationX, translationY } }) => {
     if (oldState === State.ACTIVE) {
-      console.log('Pan End');
       ReactNativeHapticFeedback.trigger(successVibrateMethod, vibrateOptions);
 
-      let updatedAttributes = {};
+      const { damp=1 } = control, updatedAttributes = {};
       if (control.prop[0]) {
-        updatedAttributes[control.prop[0]] = lastValueX - translationX;
+        updatedAttributes[control.prop[0]] = toFixed(lastValueX - translationX * damp);
       }
       if (control.prop[1]) {
-        updatedAttributes[control.prop[1]] = lastValueY - translationY;
+        updatedAttributes[control.prop[1]] = toFixed(lastValueY - translationY * damp);
       }
 
       setSelected(updatedAttributes);

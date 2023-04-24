@@ -10,6 +10,8 @@
     "react-native": "^0.68.1",
     "react-native-color-picker-ios": "^0.1.2",
     "react-native-fs": "^2.19.0",
+    "react-native-document-picker": "^8.1.0",
+    "react-native-image-picker": "^4.8.3",
     "react-native-gesture-handler": "^2.4.2",
     "react-native-google-mobile-ads": "^6.3.0",
     "react-native-haptic-feedback": "^1.14.0",
@@ -18,7 +20,8 @@
     "react-native-svg": "^12.3.0",
     "react-native-view-shot": "^3.5.0",
     "react-native-wheel-color-picker": "^1.2.0",
-    "react-redux": "^7.2.5"
+    "react-redux": "^7.2.5",
+    "rn-fetch-blob": "^0.12.0"
   },
   "dependencies": {
     "@gorhom/portal": "^1.0.14",

@@ -111,11 +111,11 @@ const ResizeControlLayer = ({ elementRef }) => {
           </View>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={onToPath}>
+        {/* <TouchableOpacity onPress={onToPath}>
           <View pointerEvents='auto' style={[styles.sideButton, { backgroundColor: elementRef.controlColor }]}>
             <MaterialCommunityIcon name="vector-curve" size={17} color="#fff" />
           </View>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </View>
 
       { 

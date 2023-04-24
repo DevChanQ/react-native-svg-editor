@@ -1,13 +1,15 @@
 import React, { useCallback } from 'react';
 import { View } from 'react-native';
-import { InterstitialAd, BannerAdSize, BannerAd, TestIds, AdEventType } from 'react-native-google-mobile-ads';
-import {useSelector} from 'react-redux';
+import { InterstitialAd, BannerAdSize, BannerAd, TestIds, AdEventType, AppOpenAd } from 'react-native-google-mobile-ads';
+import { useSelector } from 'react-redux';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import BlurView from '../components/BlurView';
-import {selectPremium} from '../redux/selectors';
+import { selectPremium } from '../redux/selectors';
 
 const emptyObj = {};
+
+let appOpenAd;
 
 /**
  * 
@@ -52,6 +54,21 @@ const useShowInterstitialAd = (options) => {
   }, [premium]);
 };
 
+const prepareAppOpenAd = (adUnitId) => {
+  appOpenAd = AppOpenAd.createForAdRequest(adUnitId);
+  return new Promise((resolve) => {
+    appOpenAd.addAdEventListener(AdEventType.LOADED, resolve);
+    appOpenAd.load();
+  });
+}
+
+const showAppOpenAd = (onAdClose=() => {}) => {
+  if (!appOpenAd) throw new Error('App open ad not initialised');
+  appOpenAd.addAdEventListener(AdEventType.ERROR, onAdClose);
+  appOpenAd.addAdEventListener(AdEventType.CLOSED, onAdClose);
+  appOpenAd.show();
+}
+
 const AdBanner = ({ adUnitId, dark=true, safeArea=true, style=emptyObj }) => {
   const premium = useSelector(selectPremium);
   const { bottom } = useSafeAreaInsets();
@@ -74,4 +91,4 @@ const AdBanner = ({ adUnitId, dark=true, safeArea=true, style=emptyObj }) => {
   );
 };
 
-export {showInterstitialAd, AdBanner, useShowInterstitialAd};
+export {showInterstitialAd, AdBanner, useShowInterstitialAd, prepareAppOpenAd, showAppOpenAd};
