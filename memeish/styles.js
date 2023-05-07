@@ -5,6 +5,9 @@ import {
 } from 'react-native';
 
 export const darkColor = "#1c1c1e";
+export const lightDarkColor = "#3a3a3c";
+export const lighterDarkColor = "#4c4c4e";
+export const lightestDarkColor = "#7c7c7e";
 export const lightColor = "#f2f2f7";
 export const secondaryColor = "#8C2F35";
 export const secondaryDarkColor = "#6D2328";

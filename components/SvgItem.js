@@ -1233,10 +1233,6 @@ class SvgTextItem extends SvgItem {
     }
   };
 
-  onValueRefreshed = (changed) => {
-    this.valueRefreshed = true;
-  };
-
   scale(translation) {
     if (!this.manuallyEdited) this.manuallyEdited = true;
     super.scale(translation);
@@ -1333,7 +1329,7 @@ class SvgTextItem extends SvgItem {
       style['textShadowColor'] = '#00000078';
     }
 
-    if (editMode) {
+    if (editMode && this.selected) {
       return (
         <TextInput
           style={style}
