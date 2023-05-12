@@ -12,6 +12,7 @@ export const lightColor = "#f2f2f7";
 export const secondaryColor = "#8C2F35";
 export const secondaryDarkColor = "#6D2328";
 export const blueColor = "#0A84FF";
+export const greenColor = "#34C759";
 
 const titleText = {
   fontSize: 34,

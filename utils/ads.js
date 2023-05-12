@@ -69,6 +69,18 @@ const showAppOpenAd = (onAdClose=() => {}) => {
   appOpenAd.show();
 }
 
+const useShowAppOpenAd = (onAdClose=() => {}) => {
+  const premium = useSelector(selectPremium);
+  return useCallback(() => {
+    if (premium) {
+      onAdClose();
+    } else {
+      showAppOpenAd(onAdClose)
+    };
+  }, [premium, onAdClose]);
+};
+
+
 const AdBanner = ({ adUnitId, dark=true, safeArea=true, style=emptyObj }) => {
   const premium = useSelector(selectPremium);
   const { bottom } = useSafeAreaInsets();
@@ -91,4 +103,4 @@ const AdBanner = ({ adUnitId, dark=true, safeArea=true, style=emptyObj }) => {
   );
 };
 
-export {showInterstitialAd, AdBanner, useShowInterstitialAd, prepareAppOpenAd, showAppOpenAd};
+export {showInterstitialAd, AdBanner, useShowInterstitialAd, prepareAppOpenAd, showAppOpenAd, useShowAppOpenAd};

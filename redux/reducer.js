@@ -1,9 +1,10 @@
-import { ADD_FONT, SET_PREMIUM, SET_VERSION } from "./actions";
+import { ADD_FONT, SET_PREMIUM, SET_VERSION, SET_NOT_FIRST_TIME } from "./actions";
 
 const DEFAULT_INITIAL_STATE = {
   version: null,
   fonts: [],
 
+  first_time: true,
   premium: false,
 }
 
@@ -36,6 +37,9 @@ const extendSVGEditorReducer = (initialState={}, reducer) => {
       }
       case SET_VERSION: {
         return { ...state, version }
+      }
+      case SET_NOT_FIRST_TIME: {
+        return { ...state, first_time: false }
       }
       default:
         break;
