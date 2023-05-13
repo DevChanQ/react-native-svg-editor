@@ -86,6 +86,9 @@ const Controller = ({
   // state variables
   const [displayValue, setDisplayValue] = useState(initialValue);
 
+  // refs
+  const lastUpdatedAttributes = useRef({});
+
   useEffect(() => {
     if (activated) {
       ReactNativeHapticFeedback.trigger(activateVibrateMethod, vibrateOptions);
@@ -94,11 +97,13 @@ const Controller = ({
   }, [activated]);
 
   const onPan = useCallback(({ nativeEvent: { translationX, translationY } }) => {
-    const { damp=1 } = control;
+    const { damp=1, min, max } = control;
 
     let updatedAttributes = {}, values = [];
     if (control.prop[0]) {
       let setValue = toFixed(lastValueX - translationX * damp);
+      if (typeof min === "number") setValue = Math.max(setValue, min);
+      if (typeof max === "number") setValue = Math.min(setValue, max);
       updatedAttributes[control.prop[0]] = setValue;
 
       values.push(Math.floor(setValue));
@@ -106,6 +111,8 @@ const Controller = ({
 
     if (control.prop[1]) {
       let setValue = toFixed(lastValueY - translationY * damp);
+      if (typeof min === "number") setValue = Math.max(setValue, min);
+      if (typeof max === "number") setValue = Math.min(setValue, max);
       updatedAttributes[control.prop[1]] = setValue;
 
       values.push(Math.floor(setValue));
@@ -113,21 +120,13 @@ const Controller = ({
 
     setDisplayValue(values.join(','));
     updateSelected(updatedAttributes);
+    lastUpdatedAttributes.current = updatedAttributes;
   }, [control, lastValueX, lastValueY]);
 
-  const onPanStateChanged = useCallback(({ nativeEvent: { oldState, state, translationX, translationY } }) => {
+  const onPanStateChanged = useCallback(({ nativeEvent: { oldState } }) => {
     if (oldState === State.ACTIVE) {
       ReactNativeHapticFeedback.trigger(successVibrateMethod, vibrateOptions);
-
-      const { damp=1 } = control, updatedAttributes = {};
-      if (control.prop[0]) {
-        updatedAttributes[control.prop[0]] = toFixed(lastValueX - translationX * damp);
-      }
-      if (control.prop[1]) {
-        updatedAttributes[control.prop[1]] = toFixed(lastValueY - translationY * damp);
-      }
-
-      setSelected(updatedAttributes);
+      setSelected(lastUpdatedAttributes.current);
     }
   }, [control, lastValueX, lastValueY]);
 
