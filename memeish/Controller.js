@@ -7,6 +7,7 @@ import Animated, { useSharedValue, useAnimatedStyle, withTiming, interpolate, in
 import BlurView from '../components/BlurView';
 import { showColorPicker } from '../components/ColorPicker';
 import { valueOrDefault } from '../utils';
+import { PremiumTouchableOpacity } from '../utils/premium';
 
 const styles = StyleSheet.create({
   control: {
@@ -33,6 +34,13 @@ const styles = StyleSheet.create({
     color: "#f2f2f7",
     fontSize: 14,
     fontWeight: 'bold',
+  },
+  iconStyle: {
+    right: 7,
+    top: 8,
+  },
+  childStyle: {
+    opacity: 0.8
   }
 })
 
@@ -68,6 +76,9 @@ const Controller = ({
   updateSelected,
   iconComponent : IconComponent=(<></>) 
 }) => {
+  const premium = !!control.premium;
+  const TouchableComponent = premium ? PremiumTouchableOpacity : TouchableOpacity;
+
   const defaultValue = control['default'];
   const elementRef = canvasRef.current?.getSelectedElementRef();
 
@@ -152,7 +163,7 @@ const Controller = ({
     };
 
     return (
-      <TouchableOpacity onPress={onPress}>
+      <TouchableComponent onPress={onPress} iconStyle={styles.iconStyle} childStyle={styles.childStyle} size={20}>
         <View style={styles.control}>
           <BlurView
             blurType={blurType}
@@ -161,7 +172,7 @@ const Controller = ({
           
           <IconComponent control={control} />
         </View>
-      </TouchableOpacity>
+      </TouchableComponent>
     );
   } else if (control.type === 'slider') {
     const onPress = () => {
@@ -175,7 +186,7 @@ const Controller = ({
         onHandlerStateChange={onPanStateChanged}>
         <Animated.View style={sliderStyle}>
       
-          <TouchableOpacity onPress={onPress}>
+          <TouchableComponent onPress={onPress} iconStyle={styles.iconStyle} childStyle={styles.childStyle} size={20}>
             <View style={styles.control}>
               {/* <Animated.View style={[styles.sliderBackground, sliderBackgroundStyle]} /> */}
               <BlurView
@@ -188,7 +199,7 @@ const Controller = ({
                 <IconComponent control={control} />
               }
             </View>
-          </TouchableOpacity>
+          </TouchableComponent>
 
         </Animated.View>
       </PanGestureHandler>
@@ -201,7 +212,7 @@ const Controller = ({
     };
 
     return (
-      <TouchableOpacity onPress={onPress}>
+      <TouchableComponent onPress={onPress} iconStyle={styles.iconStyle} childStyle={styles.childStyle} size={20}>
         <View style={styles.control}>
           <BlurView
             blurType={blurType}
@@ -210,7 +221,7 @@ const Controller = ({
           
           <IconComponent control={control} value={value} />
         </View>
-      </TouchableOpacity>
+      </TouchableComponent>
     );
   }
 
