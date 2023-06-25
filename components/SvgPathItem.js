@@ -42,8 +42,6 @@ class SvgPathItem extends SvgItem {
   }
 
   onValueRefreshed = (changed) => {
-    console.log('SvgPathItem.onValueRefreshed: ', changed);
-
     if (changed['d']) {
       this._refreshParsedPath();
       this._lastKX = 1;
@@ -222,11 +220,11 @@ class SvgPathItem extends SvgItem {
     const strokeWidth = offsetStrokeWidth ? this.state.attributes['stroke-width'] : 0;
     let {width, height} = this._lastAttributes;
     
-    let kx  = (newWidth-strokeWidth) / width, ky = (newHeight-strokeWidth) / height;
+    let kx = (newWidth-strokeWidth) / width, ky = (newHeight-strokeWidth) / height;
     
     this.parsedPath.scale(kx/this._lastKX, ky/this._lastKY);
     this._lastKX = kx, this._lastKY = ky;
-
+    
     if (update) {
       this.updatePath();
     } else {
@@ -234,7 +232,7 @@ class SvgPathItem extends SvgItem {
     }
   }
 
-  scale({ translationX, translationY }) {
+  scale({ translationX, translationY, update=true }) {
     let {width, height} = this._lastAttributes;
     let newWidth = width + translationX / this.getScale(), newHeight = height + translationY / this.getScale();
 
@@ -243,7 +241,7 @@ class SvgPathItem extends SvgItem {
       else newWidth = newHeight * this.aspectRatio;
     }
 
-    this.setSize({ width: newWidth, height: newHeight, update: true, offsetStrokeWidth: false });
+    this.setSize({ width: newWidth, height: newHeight, update, offsetStrokeWidth: false });
   }
 
   renderControlLayer() {

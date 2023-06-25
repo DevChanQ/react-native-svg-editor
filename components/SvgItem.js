@@ -76,7 +76,7 @@ class SvgItem extends React.PureComponent {
       console.log(`SvgItem (${id}): props different, proceed to update internal state`);
 
       const newAttributes = newInfo.get('attributes'), oldAttributes = info.get('attributes');
-      this._attrDiff = newAttributes.filter((v, k) => oldAttributes.get(k) !== v);
+      this._attrDiff = newAttributes.filter((v, k) => oldAttributes.get(k) !== v).toJS();
 
       console.log('SvgItem.attrDiff', this._attrDiff);
 
