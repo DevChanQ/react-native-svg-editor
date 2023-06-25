@@ -578,6 +578,7 @@ class SvgEditor extends React.PureComponent {
     let {width=0, height=0} = this.state.canvasSize;
     let rootAttributes = { 
       viewBox: `0 0 ${width} ${height}`,
+      xmlns: "http://www.w3.org/2000/svg"
     };
 
     // if (external) {
