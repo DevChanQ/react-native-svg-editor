@@ -89,6 +89,10 @@ class SvgGroupItem extends SvgItem {
         children.push(info);
       }
     }
+
+    for (let key in attributes) {
+      if (key.includes("devjeff:")) delete attributes[key];
+    }
     
     return {
       name: 'g',
