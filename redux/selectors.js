@@ -1,1 +1,0 @@
-export const selectPremium = state => state.premium// || __DEV__;
