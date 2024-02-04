@@ -69,3 +69,5 @@ buck-out/
 # personal
 memeish/
 redux/
+utils/ads.js
+utils/premium.js
