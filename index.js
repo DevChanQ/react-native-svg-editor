@@ -2,6 +2,7 @@ import { NativeModules } from 'react-native';
 import RNFS from 'react-native-fs';
 import SvgEditor from './components';
 
+// native module import
 const SvgEditorNativeModule = NativeModules.SvgEditor;
 
 export default SvgEditor;
@@ -57,6 +58,10 @@ class SvgEditorManagerObject {
     } 
     
     return this.remoteFonts;
+  }
+
+  getFilePath(filePath) {
+    return SvgEditorNativeModule.getFilePath(filePath);
   }
 
   /**

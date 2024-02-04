@@ -1,12 +1,20 @@
 package com.devjeff.svgeditor; // replace com.your-app-name with your app’s name
 
+import android.app.Activity;
 import android.graphics.Typeface;
+import android.net.Uri;
+import android.database.Cursor;
+import android.provider.OpenableColumns;
+import android.provider.DocumentsContract;
+import android.util.Log;
 
 import com.facebook.react.bridge.NativeModule;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
+import com.facebook.react.bridge.WritableMap;
+import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.Promise;
 import com.facebook.react.views.text.ReactFontManager;
 
@@ -14,6 +22,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.IllegalArgumentException;
 import java.lang.reflect.Type;
 import java.net.URL;
 import java.security.SecureRandom;
@@ -30,6 +39,31 @@ public class SvgEditorModule extends ReactContextBaseJavaModule {
   @Override
   public String getName() {
     return "SvgEditor";
+  }
+
+  @ReactMethod
+  public void getFilePath(String filepath, Promise promise) {
+    Uri uri = Uri.parse(filepath);
+    Uri docUriTree = DocumentsContract.buildDocumentUriUsingTree(uri, DocumentsContract.getTreeDocumentId(uri));
+
+    String fileName = "";
+
+    if (uri.getScheme().equals("content")) {
+      try {
+        Cursor cursor = mContext.getContentResolver().query(uri, null, null, null, null);
+
+        if (cursor.moveToFirst()) {
+          fileName = cursor.getString(cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME));
+          Log.d("FS", "Real File name: " + fileName);
+        }
+        cursor.close();
+        promise.resolve(fileName);
+      } catch (IllegalArgumentException ignored) {
+        promise.reject("1", "Can not get cursor");
+      }
+    } else {
+      promise.resolve(fileName);
+    }
   }
 
   @ReactMethod

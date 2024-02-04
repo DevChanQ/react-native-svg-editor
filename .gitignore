@@ -65,3 +65,7 @@ buck-out/
 
 # CocoaPods
 /ios/Pods/
+
+# personal
+memeish/
+redux/
