@@ -34,6 +34,10 @@ const EditorView = () => {
 }
 ~~~
 
+## Live Demo
+
+You can try out the SVG Editor app on [Google Play](https://play.google.com/store/apps/details?id=com.thumbnaillab) and [Apple App Store](https://apps.apple.com/us/app/svg-editor-graphic-ui-design/id1624759841). React Native SVG Editor is the core that powers everything related to svg editing.
+
 ## Contribute
 
-This library was originally built for in-house use. The documentation is minimal so contributions are welcomed. Please support the project by making Issues and PRs.
+This project was originally created for my personal applications. It was getting harder as harder to maintain as the size of the library grew, so I figured it's best to make the library open sourced so anyone interested can take part in the project. Documentation is minimal so contributions are welcomed. Please support the project by making Issues and PRs.
