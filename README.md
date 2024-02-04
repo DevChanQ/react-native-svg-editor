@@ -4,7 +4,7 @@
 
 <img src="/screenshots/1.png" alt="screenshot" style="width: 200px;" />
 
-> :warning: This library was built for personal use initially. The documentation is minimal so contributions are welcomed.
+> :warning: This library was originally built for personal use. The documentation is minimal so contributions are welcomed.
 
 ## Installation
 ```
