@@ -2,8 +2,7 @@
 
 *A react native component that lets you display & edit svg files graphically.*
 
-![](/screenshots/1.png)
-
+<img src="/screenshots/1.png" alt="screenshot" style="max-width: 200px;display: block;margin-bottom: 30px;" />
 
 > :warning: This library was built for personal use initially. The documentation is minimal so contributions are welcomed.
 
