@@ -33,3 +33,7 @@ const EditorView = () => {
   );
 }
 ~~~
+
+## Contribute
+
+This library was originally built for in-house use. The documentation is minimal so contributions are welcomed. Please support the project by making Issues and PRs.
