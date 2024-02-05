@@ -49,6 +49,7 @@ const EditorView = () => {
     </View>
   );
 }
+~~~
 
 ## Live Demo
 
