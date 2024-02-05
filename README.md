@@ -4,7 +4,7 @@
 
 <img src="/screenshots/1.png" alt="screenshot" style="width: 200px;" />
 
-> :warning: This library was originally built for personal use. The documentation is minimal so contributions are welcomed.
+> :warning: This library was originally built for personal use. The documentation is minimal so be prepared to do a lot of code digging!
 
 ## Installation
 ```
@@ -24,6 +24,23 @@ const EditorView = () => {
   const canvasRef = useRef(null);
   const svg = `<svg width="400" height="180" xmlns="http://www.w3.org/2000/svg"><rect x="50" y="20" rx="20" ry="20" width="150" height="150" style="fill:red;stroke:black;stroke-width:5;opacity:0.5" /></svg>`
 
+  const changeSelectedElementOpacity = (opacity) => {
+    // set the selected elements opacity
+    /*
+      setting the element's attributes causes state change and thus re-renders the whole svg tree.
+      use the function `updateSelectedElementAttributes(attributes)` to update the element's internal attributes
+    */
+    canvasRef.current.setSelectedElementAttributes({ opacity });
+  };
+
+  const undo = () => {
+    canvasRef.current.undo();
+  };
+
+  const redo = () => {
+    canvasRef.current.redo();
+  };
+
   return (
     <View>
       <SvgEditor
@@ -32,7 +49,6 @@ const EditorView = () => {
     </View>
   );
 }
-~~~
 
 ## Live Demo
 
