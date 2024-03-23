@@ -1,7 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useRef } from 'react';
-import { StyleSheet, View, Text } from 'react-native';
+import React, { useCallback } from 'react';
+import { StyleSheet, View, Text, Image } from 'react-native';
 import { State, PanGestureHandler, TouchableOpacity } from 'react-native-gesture-handler';
-// import MaterialCommunityIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 const sizeBoxRect = { width: 98, height: 26 };
 const resizeBoxHitboxSize = 26;
@@ -107,15 +106,11 @@ const ResizeControlLayer = ({ elementRef }) => {
       <View style={styles.sideButtonContainer}>
         <TouchableOpacity onPress={onLock}>
           <View pointerEvents='auto' style={[styles.sideButton, { backgroundColor: elementRef.locked ? '#B7B7B7' : elementRef.controlColor }]}>
-            {/* <MaterialCommunityIcon name={!elementRef.locked ? "lock" : "lock-open-variant"} size={17} color="#fff" /> */}
+            <Image
+              source={!elementRef.locked ? require("../../assets/icons/lock/lock.png") : require("../../assets/icons/lock-open/lock-open.png")}
+              style={{ width: 20, height: 20, resizeMode: "contain" }}  />
           </View>
         </TouchableOpacity>
-
-        {/* <TouchableOpacity onPress={onToPath}>
-          <View pointerEvents='auto' style={[styles.sideButton, { backgroundColor: elementRef.controlColor }]}>
-            <MaterialCommunityIcon name="vector-curve" size={17} color="#fff" />
-          </View>
-        </TouchableOpacity> */}
       </View>
 
       { 

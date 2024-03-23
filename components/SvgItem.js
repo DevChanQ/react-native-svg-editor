@@ -736,7 +736,6 @@ class SvgItem extends React.PureComponent {
 
   getParentViewBox() {
     const {width, height} = this.getSize(), {x, y} = this.getPosition();
-    console.log(x, y, width, height);
     return `${x} ${y} ${width} ${height}`;
   }
 
