@@ -1,6 +1,5 @@
 import RNFS from 'react-native-fs';
 import { launchImageLibrary } from 'react-native-image-picker';
-import RNFetchBlob from 'rn-fetch-blob'
 
 import { checkFolderExists } from './utils';
 
@@ -43,14 +42,3 @@ export const pickImage = async (cache=true) => {
     uri: imagePath,
   };  
 };
-
-export const downloadImage = async (url, cache=true) => {
-  let filePath = await RNFetchBlob
-    .config({ fileCache : true })
-    .fetch('GET', url)
-    .then((res) => res.path());
-  
-  if (cache) filePath = await cacheImage(filePath);
-
-  return filePath;
-}

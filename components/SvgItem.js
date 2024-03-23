@@ -289,7 +289,12 @@ class SvgItem extends React.PureComponent {
     // https://stackoverflow.com/questions/24293880/svg-why-does-external-css-override-inline-style-for-text
     if (attributes['style']) {
       const rules = styleToAttributes(attributes['style']);
-      for (let rule of rules) attributes[rule.directive] = rule.value;
+      for (let rule of rules) {
+        attributes[rule.directive] = parseFloat(rule.value);
+        if (isNaN(attributes[rule.directive])) {
+          attributes[rule.directive] = rule.value;
+        }
+      }
       delete attributes['style'];
     }
 

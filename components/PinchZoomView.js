@@ -22,9 +22,6 @@ const styles = StyleSheet.create({
   }
 });
 
-// const PinchZoomView = () => {
-// }
-
 export default class PinchZoomView extends Component {
   // Element Refs
   _containerRef = React.createRef();
