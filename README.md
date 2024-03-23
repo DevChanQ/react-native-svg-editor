@@ -14,7 +14,23 @@ npm i react-native-svg-editor --save
 ```
 yarn add react-native-svg-editor
 ```
-  
+
+### Install peer dependencies
+
+```
+npm i react-native-svg react-native-haptic-feedback react-native-view-shot react-native-gesture-handler react-native-fs --save
+```
+
+```
+yarn add react-native-svg react-native-haptic-feedback react-native-view-shot react-native-gesture-handler react-native-fs
+```
+
+If you are developing for iOS devices on Mac, do pod install after installing peer dependencies
+
+```
+cd ios && pod install && cd ../
+```
+
 ## Usage
 
 ~~~ javascript
