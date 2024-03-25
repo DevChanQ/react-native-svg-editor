@@ -1,5 +1,5 @@
-import PropTypes from 'prop-types';
 import React from 'react';
+import PropTypes from 'prop-types';
 import { View, ImageBackground, StyleSheet, PixelRatio, Animated, Platform, Alert } from 'react-native';
 import ViewShot, {captureRef} from 'react-native-view-shot';
 import { trigger } from "react-native-haptic-feedback";

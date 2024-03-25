@@ -31,6 +31,11 @@ If you are developing for iOS devices on Mac, do pod install after installing pe
 cd ios && pod install && cd ../
 ```
 
+#### React Native Gesture Handler Installation
+
+Add `GestureHandlerRootView` according to `react-native-gesture-handler` instructions:
+https://docs.swmansion.com/react-native-gesture-handler/docs/fundamentals/installation
+
 ## Usage
 
 ~~~ javascript
