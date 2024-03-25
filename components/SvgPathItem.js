@@ -1,6 +1,6 @@
 import React from 'react';
 
-import getBBox from 'svg-path-bbox/src';
+import getBBox from 'svg-path-bbox/dist';
 
 import { valueOrDefault } from '../utils';
 import { Svg, CurveTo, SvgItem as PathItem } from './svg';
