@@ -1,7 +1,6 @@
-import React, { useRef, useCallback } from 'react';
-import { View, StyleSheet } from 'react-native';
+import React from 'react';
 
-import getBBox from 'svg-path-bbox';
+import getBBox from 'svg-path-bbox/src';
 
 import { valueOrDefault } from '../utils';
 import { Svg, CurveTo, SvgItem as PathItem } from './svg';
