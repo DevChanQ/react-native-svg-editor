@@ -6,6 +6,8 @@
 
 > :warning: This library was originally built for personal use. The documentation is minimal so be prepared to do a lot of code digging!
 
+> :construction: Please keep in mind that the svg spec isn't implemented fully but I tried to cover as much as possible. That's why contributions will be appreciated!
+
 ## Installation
 ```
 npm i react-native-svg-editor --save
@@ -38,7 +40,9 @@ https://docs.swmansion.com/react-native-gesture-handler/docs/fundamentals/instal
 
 ## Usage
 
-~~~ javascript
+Please check out https://github.com/DevChanQ/react-native-svg-editor/blob/master/components/BaseSvgEditor.js  Most public functions that you should access are commented so you will get a sense of how to use them!
+
+~~~ jsx
 import SvgEditor from 'react-native-svg-editor';
 
 const EditorView = () => {
@@ -63,7 +67,7 @@ const EditorView = () => {
   };
 
   return (
-    <View>
+    <View style={{ flex: 1 }}>
       <SvgEditor
         ref={canvasRef}
         svg={svg} />
